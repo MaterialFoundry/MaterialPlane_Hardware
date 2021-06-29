@@ -1,0 +1,29 @@
+#######################################
+# Syntax Coloring Map 
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+IRSend KEYWORD1
+IRRecv KEYWORD2
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+start KEYWORD2
+available KEYWORD2
+read KEYWORD2
+setMargin KEYWORD2
+inPrefVector KEYWORD2
+setPreferred KEYWORD2
+setPreferred KEYWORD2
+stop KEYWORD2
+active KEYWORD2
+send KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
