@@ -9,7 +9,7 @@ PAJ7025R3::PAJ7025R3(uint8_t cs){
   SPI.begin();
   pinMode(_cs,OUTPUT); //set chip select pin
   digitalWrite(_cs,HIGH);
-  SPI.beginTransaction(SPISettings(7000000, LSBFIRST, SPI_MODE3));
+  SPI.beginTransaction(SPISettings(14000000, LSBFIRST, SPI_MODE3));
 }
 
 void PAJ7025R3::initialize(){

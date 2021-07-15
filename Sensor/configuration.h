@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION  "1.1.0"
+#define FIRMWARE_VERSION  "2.0.0"
 
 //=============================================================
 //Debug
@@ -27,7 +27,7 @@
  * Decreasing the frame period will decrease the maximum exposure time, and might cause issues when smart IR bases are used.
  * The value is a float that can be between 5 and 100ms (200Hz and 0.01Hz). 
  */
- #define FRAME_PERIOD 50
+ #define FRAME_PERIOD 5
 
 /**
  * EXPOSURE_TIME (BETA kit only)
@@ -97,3 +97,5 @@
 #define BATT_NOT_CHARGING   0
 #define BATT_CHARGING       1
 #define BATT_FULL           2
+
+#define AVERAGE_NUM         10

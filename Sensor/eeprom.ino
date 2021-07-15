@@ -18,6 +18,7 @@
 #define IR_MINAREA_ADDR     308   //1 byte
 #define IR_MAXAREA_ADDR     309   //2 bytes
 #define IR_POINTS_ADDR      311   //1 byte
+#define IR_AVG_ADDR         312   //1 byte
 
 #define CAL_EN_ADDR         400
 #define OFFSET_EN_ADDR      401
@@ -43,6 +44,7 @@ void startupEeprom(){
   mirrorX = getEepromCalMirrorX();
   mirrorY = getEepromCalMirrorY();
   rotation = getEepromCalRotation();
+  averageCount = getEepromAvg();
   readCal();
   cal.calculateHomographyMatrix();
 }
@@ -74,6 +76,7 @@ void firstBoot(){
   setEepromSerialOutput(SERIAL_OUTPUT);
   setEepromWsPort(WS_PORT_DEFAULT);
   setEepromWsMode(WS_MODE_SERVER);
+  setEepromAvg(AVERAGE_NUM);
   setEepromIrFramePeriod(FRAME_PERIOD);
   setEepromIrExposure(EXPOSURE_TIME);
   setEepromIrGain(GAIN);
@@ -82,6 +85,11 @@ void firstBoot(){
   setEepromIrMinArea(MIN_AREA_TRESHOLD);
   setEepromIrMaxArea(MAX_AREA_TRESHOLD);
   setEepromIrPoints(MAX_IR_POINTS);
+  setEepromCalCalibration(false);
+  setEepromCalOffset(false);
+  setEepromCalMirrorX(false);
+  setEepromCalMirrorY(false);
+  setEepromCalRotation(false);
   EEPROM.commit(); 
 }
 
@@ -194,6 +202,15 @@ void getEepromWsIP(){
   uint8_t IPb = EEPROM.read(WS_IP_ADDR+1);
   uint8_t IPc = EEPROM.read(WS_IP_ADDR+2);
   uint8_t IPd = EEPROM.read(WS_IP_ADDR+3);
+}
+
+uint8_t getEepromAvg(){
+  return EEPROM.read(IR_AVG_ADDR);
+}
+
+void setEepromAvg(uint8_t val) {
+  EEPROM.write(IR_AVG_ADDR,val);
+  EEPROM.commit(); 
 }
 
 void setEepromIrFramePeriod(float period){

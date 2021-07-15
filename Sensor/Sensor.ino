@@ -44,6 +44,7 @@ volatile uint8_t calibrationProcedure = 0;
 bool calibrationRunning = false;
 float framePeriod = 50;
 unsigned long timer = 0;
+uint8_t averageCount = 10;
 
 uint8_t wsMode = WS_MODE_SERVER;
 uint16_t wsPort = WS_PORT_DEFAULT;
@@ -104,6 +105,8 @@ void loop() {
       IRtimer = millis();
       timer = micros();
       readIR();
+      //unsigned long timer2 = micros()-timer;
+      //Serial.println(timer2);
     }
 
     while(IDsensor.available()){

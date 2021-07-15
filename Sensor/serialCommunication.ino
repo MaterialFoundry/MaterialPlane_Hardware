@@ -110,7 +110,8 @@ uint8_t analyzeMessage(String msg) {
     }
     
     else if (recArray[1] == "IR") {
-      if (recArray[2] == "GAIN") Serial.println("Gain: " + (String)IRsensor.getGain());
+      if (recArray[2] == "AVERAGE") Serial.println("Average Count: " + (String)averageCount);
+      else if (recArray[2] == "GAIN") Serial.println("Gain: " + (String)IRsensor.getGain());
       else if (recArray[2] == "BRIGHTNESS") Serial.println("Brightness Threshold: " + (String)IRsensor.getPixelBrightnessThreshold());
       
       #if defined(HW_BETA)
@@ -240,7 +241,13 @@ uint8_t analyzeMessage(String msg) {
       else Serial.println("Error: Invalid value");
     }
     else if (recArray[1] == "IR"){
-      if (recArray[2] == "GAIN"){
+      if (recArray[2] == "AVERAGE"){
+        averageCount = recArray[3].toInt();
+        setEepromAvg(averageCount);
+        delay(100);
+        Serial.println("IR average count set to: " + (String)averageCount);
+      }
+      else if (recArray[2] == "GAIN"){
         IRsensor.setGain(recArray[3].toFloat());
         setEepromIrGain(recArray[3].toFloat());
         delay(100);
@@ -396,7 +403,8 @@ void printHelp(){
   msg += " SET/GET WS IP [ip]\t\t\t- XXX.XXX.XXX.XXX\n";
   msg += " GET WS RUNNING\n";
   msg += " GET WS CLIENTS\n\n";
-  
+
+  msg += " SET/GET IR AVERAGE [average count]\t- 8bit integer\n";
   msg += " SET/GET IR FRAMEPERIOD [frameperiod]\t- float (ms)\n";
   msg += " SET/GET IR EXPOSURE [exposure]\t\t- float (ms)\n";
   msg += " SET/GET IR GAIN [gain]\t\t\t- float\n";
@@ -478,6 +486,7 @@ void printStatus() {
   }
 
   Serial.println("\nIR TRACKER");
+  Serial.println("Average Count:\t\t" + (String)averageCount);
   #if defined(HW_BETA)
     Serial.println("Frame Period:\t\t" + (String)IRsensor.getFramePeriod() + "ms (Frame Rate: " + (String)(1000/IRsensor.getFramePeriod()) + "Hz)");
     Serial.println("Exposure Time:\t\t" + (String)IRsensor.getExposureTime() + "ms");
@@ -513,7 +522,7 @@ void printStatus() {
 }
 
 void updateSetting(){
-  String msg = "{\"status\":\"connected\",\"firmware\":" + (String)FIRMWARE_VERSION + ",\"hardware\":";
+  String msg = "{\"status\":\"connected\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":";
   #if defined(HW_BETA)
     msg += "\"BETA\",";
   #elif defined(HW_DIY_FULL)
@@ -523,9 +532,9 @@ void updateSetting(){
   #endif
   msg += "\"cal\":{\"calibrationEnable\":" + (String)calibration + ",\"offsetEn\":" + (String)offsetOn + ",\"mirrorX\":" + (String)mirrorX + ",\"mirrorY\":" + (String)mirrorY + ",\"rotation\":" + (String)rotation + "},";
   #if defined(HW_BETA)
-    msg += "\"ir\":{\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + "}";
+    msg += "\"ir\":{\"averageCount\":" + (String)averageCount + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + "}";
   #else
-    msg += "\"ir\":{\"framePeriod\":" + (String)framePeriod + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + "}";
+    msg += "\"ir\":{\"averageCount\":" + (String)averageCount + ",\"framePeriod\":" + (String)framePeriod + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + "}";
   #endif
   
   msg += "}";

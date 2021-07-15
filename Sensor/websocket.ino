@@ -7,24 +7,7 @@ void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
         {
             IPAddress ip = webSocketServer.remoteIP(num);
             if (debug) Serial.printf("[%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1], ip[2], ip[3]);
-            String msg = "{\"status\":\"connected\",\"firmware\":" + (String)FIRMWARE_VERSION + ",\"hardware\":";
-            #if defined(HW_BETA)
-              msg += "\"BETA\",";
-            #elif defined(HW_DIY_FULL)
-              msg += "\"DIY_FULL\",";
-            #else
-              msg += "\"DIY_BASIC\",";
-            #endif
-            msg += "\"cal\":{\"calibrationEnable\":" + (String)calibration + ",\"offsetEn\":" + (String)offsetOn + ",\"mirrorX\":" + (String)mirrorX + ",\"mirrorY\":" + (String)mirrorY + ",\"rotation\":" + (String)rotation + "},";
-            #if defined(HW_BETA)
-              msg += "\"ir\":{\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + "}";
-            #else
-              msg += "\"ir\":{\"framePeriod\":" + (String)framePeriod + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + "}";
-            #endif
-            
-            msg += "}";
-            // send message to client
-            webSocketServer.sendTXT(num, msg);
+            updateSetting();
         }
         break;
     case WStype_TEXT:

@@ -12,8 +12,8 @@
  * Uncomment the hardware you're using
  */
 //#define HW_DIY_BASIC
-#define HW_DIY_FULL
-//#define HW_BETA
+//#define HW_DIY_FULL
+#define HW_BETA
 
 //=============================================================
 //Basic DIY Sensor config

@@ -1,7 +1,7 @@
 
 
-int16_t coordinates[16][2], area[16];
-uint8_t averageBrightness[16], maxBrightness[16];
+float coordinates[16][2], maxBrightness[16];
+uint16_t area[16];
 uint8_t validPoints = 0;
 uint8_t pingCounter = 0;
 uint8_t idCounter = 0;
@@ -10,31 +10,41 @@ char msgBuffer[MSG_LENGTH];
 uint8_t invalidPointCount = 0;
 bool validPointsArray[16];
 
+uint8_t averageCounter;
+float averageCoordinates[16][2];
+float averageBrightness[16];
+
+bool printData = false;
+
 void readIR(){
   //Get the coordinates
-  bool IRstatus = getCoordinates();
+  uint8_t IRstatus = getCoordinates();
 
   //If no valid points were detected
-  if (IRstatus == false) {
+  if (IRstatus == 0) {
     irAddress = 0;
     irMode = 0;
     if (idCounter > 0) idCounter--;
   }
-  printMsg();
+  if (IRstatus == 1)
+    return;
+
+  if (printData) {
+    printData = false;
+    averageCounter = 0;
+    printMsg();
+  }
 }
 
-bool getCoordinates(){
+uint8_t getCoordinates(){
   //Get data from the sensor
   IRsensor.getOutput(1);
+
   //for (int i=0; i<4; i++) Serial.print("\t" + (String)i + " " + (String)IRsensor.pointStorage[i][1] + " " + (String)IRsensor.pointStorage[i][2] + " " + (String)IRsensor.pointStorage[i][4]);
   //Serial.println();
 
   //Check if max brightness of all points is 0 (HW_BETA) or y coordinate is lower than 5452 (other HW). In which case no IR point was detected.
   uint8_t pointsMeasured = 0;
-  #if defined(HW_BETA)
-  #else
-    if (maxIRpoints > 4) maxIRpoints = 4;
-  #endif
   
   for (int i=0; i<maxIRpoints; i++) {
     #if defined(HW_BETA)
@@ -50,56 +60,74 @@ bool getCoordinates(){
     if (invalidPointCount < 255) invalidPointCount++;
     if (invalidPointCount > 5){
       validPoints = 0;
-      return false;
+      return 0;
     }
-    return true;
+    return 2;
   }
 
   #if defined(HW_BETA)
     if (irMode == 0) {
       idCounter++;
       if (idCounter > 20) idCounter = 20;
-      else if (idCounter < 5) return true;
+      else if (idCounter < 5) return 2;
     }
   #endif
   
   invalidPointCount = 0;
   validPoints = pointsMeasured;
+
+  averageCounter++;
   
   //Calculate values for all points
   for (int i=0; i<maxIRpoints; i++){
-    coordinates[i][0] = IRsensor.pointStorage[i][1];  //x coordinate
-    coordinates[i][1] = IRsensor.pointStorage[i][2];  //y coordinate
-    maxBrightness[i] = IRsensor.pointStorage[i][4];
-    
-    if (debug) Serial.print("Point " + (String)i + ": X: " + (String)coordinates[i][0] + "\tY: " + (String)coordinates[i][1] + "\tBrightness: " + (String)maxBrightness[i]);
+    uint16_t xCoord = IRsensor.pointStorage[i][1];  
+    uint16_t yCoord = IRsensor.pointStorage[i][2];  
+    uint16_t brightness = IRsensor.pointStorage[i][4];
 
-    if (maxBrightness[i] == 0) {
+    if (debug) Serial.print("Point " + (String)i + ": X: " + (String)xCoord + "\tY: " + (String)yCoord + "\tBrightness: " + (String)brightness);
+
+    if (brightness == 0) {
       if (debug) Serial.println();
       continue;
     }
 
     //If calibration is enabled, perform homography transform
     if (calibration){
-      cal.calculateCoordinates(coordinates[i][0],coordinates[i][1]);
-      coordinates[i][0] = cal.getX();
-      coordinates[i][1] = cal.getY();
-      if (debug) Serial.print("\tCX: " + (String)coordinates[i][0] + "\tCY: " + (String)coordinates[i][1]);
+      cal.calculateCoordinates(xCoord,yCoord);
+      xCoord = cal.getX();
+      yCoord = cal.getY();
+      if (debug) Serial.print("\tCX: " + (String)xCoord + "\tCY: " + (String)yCoord);
     }
 
-    if (mirrorX)  coordinates[i][0] = 4095-coordinates[i][0];
-    if (mirrorY)  coordinates[i][1] = 4095-coordinates[i][1];
+    if (mirrorX)  xCoord = 4095-xCoord;
+    if (mirrorY)  yCoord = 4095-yCoord;
 
     if (rotation){
-      uint16_t coordinatesTemp[2] = {coordinates[i][0],coordinates[i][1]};
-      coordinates[i][0] = coordinatesTemp[1];
-      coordinates[i][1] = coordinatesTemp[0];
+      uint16_t xTemp = xCoord;
+      uint16_t yTemp = yCoord;
+      xCoord = xTemp;
+      yCoord = yTemp;
     }
 
     if (debug) Serial.println();
+
+    averageCoordinates[i][0] += xCoord;  
+    averageCoordinates[i][1] += yCoord; 
+    averageBrightness[i] += brightness;
+    
+    if (averageCounter >= averageCount) {
+      coordinates[i][0] = averageCoordinates[i][0] / averageCounter;  //x coordinate
+      coordinates[i][1] = averageCoordinates[i][1] / averageCounter;  //y coordinate
+      maxBrightness[i] = averageBrightness[i] / averageCounter;
+    
+      averageCoordinates[i][0] = 0;
+      averageCoordinates[i][1] = 0;
+      averageBrightness[i] = 0;
+      printData = true;
+    }
   }
   if (debug) Serial.println("Valid Points: " + (String)validPoints + "\n");
-  return true;
+  return 2;
 }
 
 void printMsg(){
@@ -113,6 +141,7 @@ void printMsg(){
   
   //Check each valid IR point
   for (int i=0; i<maxIRpoints; i++){
+    
     #if defined(HW_BETA)
       if (IRsensor.pointStorage[i][3] > 0) {
     #else
@@ -121,7 +150,7 @@ void printMsg(){
       validPointsArray[i] = true;
       //print the data for that IR point
       if (dataStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
-      sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"x\":%d,\"y\":%d,\"maxBrightness\":%d,\"id\":%d,\"command\":%d",i,coordinates[i][0],coordinates[i][1],maxBrightness[i],irAddress,irMode);
+      sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"x\":%.2f,\"y\":%.2f,\"maxBrightness\":%.2f,\"id\":%d,\"command\":%d",i,coordinates[i][0],coordinates[i][1],maxBrightness[i],irAddress,irMode);
       #if defined(HW_BETA)
         if (calOpen) sprintf(msgBuffer+strlen(msgBuffer),",\"avgBrightness\":%d,\"area\":%d,\"radius\":%d",IRsensor.pointStorage[i][3],IRsensor.pointStorage[i][0],IRsensor.pointStorage[i][6]);
       #endif
@@ -139,6 +168,7 @@ void printMsg(){
   sprintf(msgBuffer+strlen(msgBuffer),"]}");
   validPointsOld = validPoints;
   if (serialOutput) Serial.println(msgBuffer);
+
   webSocketServer.broadcastTXT(msgBuffer);
 }
 
