@@ -93,7 +93,7 @@ void loop() {
     else if (result == false) if (debug) Serial.println("ERROR"); 
   }
   
-  wsPing(PING_MAIN_LOOP);
+  wsPing();
   
   webSocketServer.loop();
 

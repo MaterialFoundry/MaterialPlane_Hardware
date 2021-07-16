@@ -41,12 +41,12 @@ void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
 /*
  * Ping Foundry to make sure ws connection is alive
  */
-void wsPing(uint8_t source) {
+void wsPing() {
   if (millis()-pingTimer > PING_PERIOD) {
     pingTimer = millis();
     String msg = "{\"status\":\"ping\",\"source\":\"";
-    if (source == PING_MAIN_LOOP) msg += "mainLoop";
-    else if (source == PING_CAL) msg += "calibration";
+    if (calibrationProcedure == CALIBRATION_INACTIVE) msg += "mainLoop";
+    else msg += "calibration";
     msg+="\",\"battery\":{\"voltage\":"+(String)vBat+",\"charging\":"+(String)chargeState+"}}";
     webSocketServer.broadcastTXT(msg);
     if (debug) Serial.println(msg);

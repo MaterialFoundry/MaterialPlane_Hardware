@@ -29,7 +29,7 @@ void readIR(){
   if (IRstatus == 1)
     return;
 
-  if (printData) {
+  if (printData || (validPoints == 0 && validPointsOld != 0)) {
     printData = false;
     averageCounter = 0;
     printMsg();
@@ -134,6 +134,7 @@ void printMsg(){
   bool dataStarted = false;
   //Serial.println((String)validPoints + "\t" + (String)validPointsOld);
   if (validPoints == 0 && validPointsOld == 0 && debug == false) return;
+  
   //Clear the message buffer
   sprintf(msgBuffer,"");
   
@@ -161,7 +162,7 @@ void printMsg(){
     else if (validPointsArray[i] == true) {
       validPointsArray[i] = false;
       if (dataStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
-      sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"id\":%d,\"command\":2}",i,irAddress);
+      sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"id\":%d,\"command\":129}",i,irAddress);
       dataStarted = true;
     }
   }
