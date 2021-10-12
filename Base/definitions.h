@@ -13,16 +13,17 @@
 /*
  * PWM settings
  */
-#define PWM_COUNT 121  //25 for 38khz, 29 for 33khz
-#define PWM_PRESCALER 0
-#define PWM_LOW PWM_COUNT/2  
-#define PWM_HIGH 255
+#define PWM_COUNT       129  //129 for 5MHz
+#define PWM_PRESCALER   0
+#define PWM_LOW         PWM_COUNT/2  
+#define PWM_HIGH        0           
+#define PWM_OFF         PWM_COUNT           
 
 /*
  * IR timing settings
  */
-#define IR_SHORT  450   //us
-#define IR_LONG   900   //us
+#define IR_SHORT  480   //us
+#define IR_LONG   980   //us
 
 /*
  * ID settings
@@ -36,17 +37,16 @@
  */
 
 //SPI pins
-#define CS      PIN4_bm
-#define DATA    PIN1_bm
-#define SCK     PIN3_bm
+#define CS      PIN_PC1
+#define DATA    PIN_PA1
+#define SCK     PIN_PA3
 
 //Interrupt pins
-#define INT1_IN PIN2_bm
-#define INT2_IN PIN2_bm
+#define INT_IN PIN2_bm
 
 //LED pins
-#define R_LED   PIN5_bm
-#define IR_LED  PIN5_bm
+#define LED       PIN_PC0 //PA5
+#define IR_LED    PIN_PA5
 
 /*
  * Misc

@@ -5,6 +5,8 @@ void initialization() {
   delay(100);
   Serial.println("\n-----------------------------------------------------------------------------\nStarting initialization\n");
 
+  SPIFFS.begin(); 
+  
   IRsensor.initialize();
 
   //Start and setup EEPROM
@@ -15,48 +17,35 @@ void initialization() {
   btStop();
 
   //Start WiFi
-  if (ssidString.length() > 0) {
-    char ssid[ssidString.length()];
-    char password[passwordString.length()];
-    
-    ssidString.toCharArray(ssid,ssidString.length()+1);
-    passwordString.toCharArray(password,passwordString.length()+1);
+  if (ssidString.length() == 0) Serial.println("SSID not configured, not connecting to WiFi");
   
-    connectWifi(ssid, password, ssidString.length(), passwordString.length());
-  }
-  else {
-    Serial.println("SSID not configured, not connecting to WiFi");
-  }
-
-  //Start websocket server
-  wsMode = WS_MODE_SERVER;  //for now, force server mode
-  if (wsMode == WS_MODE_SERVER && WiFi.status() == WL_CONNECTED) {
-    webSocketServer.begin();
-    Serial.println("Websocket server started on port: " + (String)wsPort + "\n");
-  }
-  
-  //Connect to websocket server
-  else if (wsMode == WS_MODE_CLIENT) {
-    
-  }
-  
-  webSocketServer.onEvent(webSocketServerEvent);
+  char ssid[ssidString.length()];
+  stringToChar(ssidString, ssid);
+  char password[passwordString.length()];
+  stringToChar(passwordString, password);
+  connectWifi(ssid, password, ssidString.length(), passwordString.length());
   
   initializeEepromIRsensor();
   
   #if defined(HW_DIY_BASIC) 
 
   #elif defined(HW_DIY_FULL)
-    //LEDs
-    pinMode(LEDL_R,OUTPUT);
-    digitalWrite(LEDL_R,LOW);
-    pinMode(LEDL_G,OUTPUT);
-    digitalWrite(LEDL_G,HIGH);
-    pinMode(LEDR_R,OUTPUT);
-    digitalWrite(LEDR_R,LOW);
-    pinMode(LEDR_G,OUTPUT);
-    digitalWrite(LEDR_G,LOW);
+    //Configure LED channels
+    ledcSetup(LEDL_R_CH, 5000, 8);
+    ledcSetup(LEDL_G_CH, 5000, 8);
+    ledcSetup(LEDR_R_CH, 5000, 8);
+    ledcSetup(LEDR_G_CH, 5000, 8);
+    ledcAttachPin(LEDL_R, LEDL_R_CH);
+    ledcAttachPin(LEDL_G, LEDL_G_CH);
+    ledcAttachPin(LEDR_R, LEDR_R_CH);
+    ledcAttachPin(LEDR_G, LEDR_G_CH);
 
+    //Switch LEDs off
+    ledcWrite(LEDL_R_CH, 0);
+    ledcWrite(LEDL_G_CH, 0);
+    ledcWrite(LEDR_R_CH, 0);
+    ledcWrite(LEDR_G_CH, 0);
+    
     //Disable on-board led
     tp.DotStar_SetPower(false);
 
@@ -74,22 +63,41 @@ void initialization() {
     pinMode(VBAT_EN,OUTPUT);
     pinMode(VBAT_SENSE,INPUT);
     pinMode(VBAT_STAT,INPUT_PULLUP);
+
+    //Charage enable pin
+    pinMode(CHARGE_EN,OUTPUT);
+    //Enable charging
+    digitalWrite(CHARGE_EN,LOW);
   
-    //Batter monitoring pins
+    //Battery monitoring pins
     pinMode(USB_ACTIVE,INPUT);
     
     //LEDs
-    pinMode(LEDL_R,OUTPUT);
-    digitalWrite(LEDL_R,LOW);
-    pinMode(LEDL_G,OUTPUT);
-    digitalWrite(LEDL_G,HIGH);
-    pinMode(LEDR_R,OUTPUT);
-    digitalWrite(LEDR_R,LOW);
-    pinMode(LEDR_G,OUTPUT);
-    digitalWrite(LEDR_G,LOW);
+    //Configure LED channels
+    ledcSetup(LEDL_R_CH, 5000, 8);
+    ledcSetup(LEDL_G_CH, 5000, 8);
+    ledcSetup(LEDR_R_CH, 5000, 8);
+    ledcSetup(LEDR_G_CH, 5000, 8);
+    ledcAttachPin(LEDL_R, LEDL_R_CH);
+    ledcAttachPin(LEDL_G, LEDL_G_CH);
+    ledcAttachPin(LEDR_R, LEDR_R_CH);
+    ledcAttachPin(LEDR_G, LEDR_G_CH);
+
+    //Switch LEDs off
+    ledcWrite(LEDL_R_CH, 0);
+    ledcWrite(LEDL_G_CH, 0);
+    ledcWrite(LEDR_R_CH, 0);
+    ledcWrite(LEDR_G_CH, 0);
 
     setRightLED(false);
   #endif
+
+  webServer.onNotFound([]() {                              // If the client requests any URI
+    if (!handleFileRead(webServer.uri()))                  // send it if it exists
+     webServer.send(404, "text/plain", "404: Not Found"); // otherwise, respond with a 404 (Not Found) error
+  });
+
+  webServer.begin();
   
   printStatus();
   

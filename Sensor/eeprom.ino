@@ -5,6 +5,7 @@
 
 #define SSID_ADDR           100   //max 32 chars
 #define PASSWORD_ADDR       132    //max 64 chars
+#define DEVICE_NAME_ADDR    210   //max 32 chars
 
 #define WS_MODE_ADDR        200   //bool
 #define WS_PORT_ADDR        201   //2 bytes
@@ -18,7 +19,7 @@
 #define IR_MINAREA_ADDR     308   //1 byte
 #define IR_MAXAREA_ADDR     309   //2 bytes
 #define IR_POINTS_ADDR      311   //1 byte
-#define IR_AVG_ADDR         312   //1 byte
+#define IR_AVG_ADDR         312   //1 byte    
 
 #define CAL_EN_ADDR         400
 #define OFFSET_EN_ADDR      401
@@ -28,13 +29,18 @@
 #define SENSITIVITY_ADDR    405
 #define CAL_ADDR            406   //8 * uint16_t = 16 bytes
 #define OFFSET_ADDR         422   //8 * uint16_t = 16 bytes
-#define COMPX_ADDR          438
-#define COMPY_ADDR          439
+#define CAL_OFFSET_X_ADDR   438   //2 bytes
+#define CAL_OFFSET_Y_ADDR   440   //2 bytes
 
 void startupEeprom(){
   if (EEPROM.read(FIRST_BOOT_ADDR) != 1) firstBoot();
   getEepromSSID();
   getEepromPassword(); 
+  getEepromDeviceName();
+  if (nameString == "") {
+    nameString = DEVICE_NAME;
+    setEepromDeviceName(DEVICE_NAME,nameString.length());
+  }
   wsPort = getEepromWsPort();
   wsMode = getEepromWsMode();
   debug = getEepromDebug();
@@ -44,6 +50,8 @@ void startupEeprom(){
   mirrorX = getEepromCalMirrorX();
   mirrorY = getEepromCalMirrorY();
   rotation = getEepromCalRotation();
+  offsetX = getEepromCalOffsetX();
+  offsetY = getEepromCalOffsetY();
   averageCount = getEepromAvg();
   readCal();
   cal.calculateHomographyMatrix();
@@ -68,10 +76,12 @@ void initializeEepromIRsensor(){
 
 
 void firstBoot(){
-  Serial.println("First boot, setting up default settings.");
+  Serial.println("Setting up default settings.");
   //Clear the EEPROM
   for (int i=0; i<512; i++) EEPROM.write(i,255);
   EEPROM.write(FIRST_BOOT_ADDR,1);
+  String deviceName = DEVICE_NAME;
+  setEepromDeviceName(DEVICE_NAME,deviceName.length());
   setEepromDebug(DEBUG);
   setEepromSerialOutput(SERIAL_OUTPUT);
   setEepromWsPort(WS_PORT_DEFAULT);
@@ -90,6 +100,8 @@ void firstBoot(){
   setEepromCalMirrorX(false);
   setEepromCalMirrorY(false);
   setEepromCalRotation(false);
+  setEepromCalOffsetX(0);
+  setEepromCalOffsetY(0);
   EEPROM.commit(); 
 }
 
@@ -168,6 +180,28 @@ void getEepromPassword() {
   for (int i=0; i<64; i++) {
     char c = EEPROM.read(PASSWORD_ADDR+i);
     if (c != 0) passwordString += c;
+  }
+}
+
+void setEepromDeviceName(const char* deviceName, int nameLength) {
+  for (int i=0; i<32; i++) {
+    char c = 0;
+    if (i<nameLength) c = deviceName[i];
+    EEPROM.write(DEVICE_NAME_ADDR+i,c);
+  }
+  EEPROM.commit();
+}
+
+void getEepromDeviceName() {
+  nameString = "";
+  uint8_t emptyCheck = 0;
+  for (int i=0; i<32; i++) {
+    char c = EEPROM.read(DEVICE_NAME_ADDR+i);
+    if (c != 0) nameString += c;
+    if (c == 255) emptyCheck++;
+  }
+  if (emptyCheck == 32) {
+    nameString = "";
   }
 }
 
@@ -352,4 +386,22 @@ void setEepromCalRotation(bool rotation){
 
 bool getEepromCalRotation(){
   return EEPROM.read(ROTATION_ADDR);
+}
+
+void setEepromCalOffsetX(int16_t offset) {
+  writeEeprom(CAL_OFFSET_X_ADDR, offset);
+  EEPROM.commit();
+}
+
+int16_t getEepromCalOffsetX() {
+  return (int16_t)readEeprom(CAL_OFFSET_X_ADDR);
+}
+
+void setEepromCalOffsetY(int16_t offset) {
+  writeEeprom(CAL_OFFSET_Y_ADDR, offset);
+  EEPROM.commit();
+}
+
+int16_t getEepromCalOffsetY() {
+  return (int16_t)readEeprom(CAL_OFFSET_Y_ADDR);
 }

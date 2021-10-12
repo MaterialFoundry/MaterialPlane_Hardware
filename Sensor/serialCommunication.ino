@@ -6,6 +6,7 @@ uint8_t checkSerial() {
  * Analyze the msg received over the serial port
  */
 uint8_t analyzeMessage(String msg) {
+  if (debug) Serial.println("Received message: " + msg);
   String recArray[6] = {"","","","","",""};                                            //Stores the read string as individual words
   uint8_t counter = 0;                                                                  //Word counter
   for (int i=0; i<(msg.length()-1); i++) {                                         //Check each individual character in the received string
@@ -23,16 +24,19 @@ uint8_t analyzeMessage(String msg) {
   }
   
   if (calibrationRunning) {
-    //Serial.println("cal running");
     if (recArray[0] == "CAL" && recArray[1] == "CANCEL") calibrationProcedure = CALIBRATION_CANCEL;
     else if (recArray[0] == "CAL" && recArray[1] == "NEXT") calibrationProcedure = CALIBRATION_NEXT;
     return 0;
   }
 
-  if (recArray[0] == "HELP") printHelp();
+  if (recArray[0] == "TEST") {
+    Serial.println("OK");
+  }
+
+  else if (recArray[0] == "HELP") printHelp();
 
   else if (recArray[0] == "RESTART") {
-    Serial.println("Restarting module");
+    Serial.println("Restarting sensor");
     ESP.restart();
   }
 
@@ -69,6 +73,9 @@ uint8_t analyzeMessage(String msg) {
         Serial.print("WiFi IP Address: ");
         if (WiFi.isConnected()) Serial.println(WiFi.localIP());
         else Serial.println("WiFi not connected");
+      }
+      else if (recArray[2] = "NAME") {
+        Serial.println("Device Name: " + nameString);
       }
       else Serial.println("Error: Invalid value");
     }
@@ -153,6 +160,12 @@ uint8_t analyzeMessage(String msg) {
         if (rotation) Serial.println("Enabled");
         else Serial.println("Disabled");
       }
+      else if (recArray[2] == "OFFSETX") {
+        Serial.println("Offset X: " + (String)getEepromCalOffsetX());
+      }
+      else if (recArray[2] == "OFFSETY") {
+        Serial.println("Offset Y: " + (String)getEepromCalOffsetY());
+      }
       else Serial.println("Error: Invalid value");
     }
     else Serial.println("Error: Invalid value");
@@ -166,6 +179,12 @@ uint8_t analyzeMessage(String msg) {
       Serial.print("Debug set to: ");
       if (debug) Serial.println("Enabled");
       else Serial.println("Disabled");
+    }
+
+    else if (recArray[1] == "DEFAULT") {
+      firstBoot();
+      Serial.println("Settings have been reset to the default values, restarting sensor");
+      ESP.restart();
     }
     
     else if (recArray[1] == "SERIALOUT") {
@@ -184,10 +203,29 @@ uint8_t analyzeMessage(String msg) {
         
         recArray[3].toCharArray(ssid,recArray[3].length()+1);
         recArray[4].toCharArray(password,recArray[4].length()+1);
-  
-        connectWifi(ssid, password, recArray[3].length(), recArray[4].length());
+        
         setEepromSSID(ssid, recArray[3].length());
         setEepromPassword(password, recArray[4].length());
+        
+        connectWifi(ssid, password, recArray[3].length(), recArray[4].length());
+      }
+      else if (recArray[2] = "NAME") {
+        char deviceName[recArray[3].length()];
+        recArray[3].toCharArray(deviceName,recArray[3].length()+1);
+        if (recArray[3].length() == 0) {
+          Serial.println("Error: Invalid value, name may not be empty");
+          return true;
+        }
+        for (int i=0; i<recArray[3].length(); i++) {
+          if (deviceName[i] == ' ') {
+            Serial.println("Error: Invalid value, name may not contain empty spaces");
+            return true;
+          }
+        }
+        setEepromDeviceName(deviceName, recArray[3].length());
+        nameString = deviceName;
+        configureDNS(nameString);
+        Serial.println("Device name set to: " + nameString);
       }
       else Serial.println("Error: Invalid value");
     }
@@ -307,6 +345,9 @@ uint8_t analyzeMessage(String msg) {
           delay(100);
           Serial.println("IR maximum points set to: " + (String)IRsensor.getObjectNumberSetting());
         }
+        else if (recArray[2] == "AUTOEXPOSE") {
+          autoExposureProcedure = EXP_START;
+        }
       #endif
       else Serial.println("Error: Invalid value");
     }
@@ -351,6 +392,16 @@ uint8_t analyzeMessage(String msg) {
         if (rotation) Serial.println("Enabled");
         else Serial.println("Disabled");
       }
+      else if (recArray[2] == "OFFSETX") {
+        offsetX = recArray[3].toInt();
+        setEepromCalOffsetX(offsetX);
+        Serial.println("Offset X set to: " + (String)offsetX);
+      }
+      else if (recArray[2] == "OFFSETY") {
+        offsetY = recArray[3].toInt();
+        setEepromCalOffsetY(offsetY);
+        Serial.println("Offset Y set to: " + (String)offsetY);
+      }
       else Serial.println("Error: Invalid value");
     }
     else Serial.println("Error: Invalid value");
@@ -360,14 +411,31 @@ uint8_t analyzeMessage(String msg) {
   else if (recArray[0] == "SCAN" && recArray[1] == "WIFI") {
     Serial.println("Scanning for WIFI stations. Please wait.");
     int n = WiFi.scanNetworks();
-
+    String wsMessage = "{\"status\":\"wifiStations\",\"data\":[";
     if (n==0)
       Serial.println("No stations found"); 
     else {
       Serial.println((String)n + " stations found");
-      for (int i = 0; i < n; ++i)
-        Serial.println((String)(i + 1) + ": " + (String)WiFi.SSID(i));
+      Serial.println("Nr\tSSID\t\t\tRSSI\tAuthentication Mode");
+      for (int i = 0; i < n; ++i) {
+        String authMode = "";
+        if (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) authMode = "Open";
+        else if (WiFi.encryptionType(i) == WIFI_AUTH_WEP) authMode = "WEP";
+        else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA_PSK) authMode = "WPA-PSK";
+        else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA2_PSK) authMode = "WPA2-PSK";
+        else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA_WPA2_PSK) authMode = "WPA-WPA2-PSK";
+        else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA2_ENTERPRISE) authMode = "WPA2-Enterprise";
+        //else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA3_PSK) authMode = "WPA3-PSK";
+        //else if (WiFi.encryptionType(i) == WIFI_AUTH_WPA2_WPA3_PSK) authMode = "WPA2-WPA3-PSK";
+        //else if (WiFi.encryptionType(i) == WIFI_AUTH_WAPI_PSK) authMode = "WAPI-PSK";
+        else authMode = "Unknown";
+        Serial.println((String)(i + 1) + "\t" + (String)WiFi.SSID(i) + "\t\t\t" + (String)WiFi.RSSI(i) + "dBm\t" + authMode);
+        if (i > 0) wsMessage += ",";
+        wsMessage += "{\"ssid\":\"" + (String)WiFi.SSID(i) + "\",\"rssi\":" + (String)WiFi.RSSI(i) + ",\"authMode\":\"" + authMode + "\"}";
+      }
     }
+    wsMessage += "]}";
+    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(wsMessage);
   }
   else if (recArray[0] == "PERFORM" && recArray[1] == "CALIBRATION"){
     calibrationProcedure = CALIBRATION_STARTING;
@@ -396,7 +464,8 @@ void printHelp(){
   msg += " SCAN WIFI\n";
   msg += " SET/GET WIFI SSID [name] [password]\t- SSID name, SSID password\n";
   msg += " GET WIFI CONNECTED\n";
-  msg += " GET WIFI IP\n\n";
+  msg += " GET WIFI IP\n";
+  msg += " SET/GET WIFI NAME [name]\t\t- device name\n\n";
   
   msg += " SET/GET WS MODE [mode]\t\t\t- OFF/CLIENT/SERVER\n";
   msg += " SET/GET WS PORT [port]\t\t\t- 16bit integer\n";
@@ -421,6 +490,8 @@ void printHelp(){
   msg += " SET/GET CAL MIRRORX [enable]\t\t- TRUE/FALSE\n";
   msg += " SET/GET CAL MIRRORY [enable]\t\t- TRUE/FALSE\n";
   msg += " SET/GET CAL ROTATION [rotation]\t- TRUE/FALSE\n";
+  msg += " SET/GET CAL OFFSETX [offset]\t\t- 16bit integer\n";
+  msg += " SET/GET IR OFFSETY [offset]\t\t- 16bit integer\n";
   
   msg += " \n";
   msg += "-----------------------------------------------------------------------------\n\n";
@@ -437,9 +508,9 @@ void printStatus() {
   #elif defined(HW_DIY_FULL)
     Serial.println("DIY Full");
   #else
-    Serial.println("BETA");
+    Serial.println("Beta");
   #endif
-  Serial.println("Firmware Version:\t" + (String)FIRMWARE_VERSION);
+  Serial.println("Firmware Version:\tv" + (String)FIRMWARE_VERSION);
   Serial.print("Debugging:\t\t");
   if (debug) Serial.println("Enabled");
   else Serial.println("Disabled");
@@ -449,9 +520,10 @@ void printStatus() {
 
   Serial.println("\nBATTERY");
   Serial.println("Charging State:\t\t" + (String)chargeState);
-  Serial.println("Voltage:\t\t" + (String)vBat);
+  Serial.println("Voltage:\t\t" + (String)vBat + "V");
 
-  Serial.print("\nWIFI\nSSID:\t\t\t");
+  Serial.print("\nWIFI\nDevice Name:\t\t\"" + nameString);
+  Serial.print("\"\nSSID:\t\t\t");
   if (ssidString.length() > 0) Serial.println("\"" + ssidString + "\"");
   else Serial.println("not configured");
   Serial.print("Connected:\t\t");
@@ -518,19 +590,36 @@ void printStatus() {
   Serial.print("Rotation:\t\t");
   if (rotation) Serial.println("Enabled");
   else Serial.println("Disabled");
+  Serial.println("Offset X:\t\t" + (String)offsetX);
+  Serial.println("Offset Y:\t\t" + (String)offsetY);
   Serial.println("-----------------------------------------------------------------------------");
 }
 
 void updateSetting(){
-  String msg = "{\"status\":\"connected\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":";
+  String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":";
   #if defined(HW_BETA)
-    msg += "\"BETA\",";
+    msg += "\"Beta\",";
   #elif defined(HW_DIY_FULL)
-    msg += "\"DIY_FULL\",";
+    msg += "\"DIY Full\",";
   #else
-    msg += "\"DIY_BASIC\",";
+    msg += "\"DIY Basic\",";
   #endif
-  msg += "\"cal\":{\"calibrationEnable\":" + (String)calibration + ",\"offsetEn\":" + (String)offsetOn + ",\"mirrorX\":" + (String)mirrorX + ",\"mirrorY\":" + (String)mirrorY + ",\"rotation\":" + (String)rotation + "},";
+  String websocketMode;
+  if (wsMode == WS_MODE_OFF) websocketMode = "Off";
+  else if (wsMode == WS_MODE_SERVER) websocketMode = "Server";
+  else if (wsMode == WS_MODE_CLIENT) websocketMode = "Client";
+  String wsClients = "";
+  if (wsMode == WS_MODE_SERVER) {
+    for (int i=0; i<webSocketServer.connectedClients(); i++) {
+      if (i > 0) wsClients += ",";
+      wsClients += "\"";
+      wsClients += webSocketServer.remoteIP(i).toString().c_str();
+      wsClients += "\"";
+    }
+  }
+  msg += "\"sett\":{\"debug\":" + (String)debug + ",\"serialOut\":" + (String)serialOutput + "},";
+  msg += "\"network\":{\"ssid\":\"" + ssidString + "\",\"ipAddress\":\"" + WiFi.localIP().toString().c_str() + "\",\"name\":\"" + nameString + "\",\"connected\":" + (String)WiFi.isConnected() + ",\"wsMode\":\"" + websocketMode + "\",\"wsPort\":" + (String)wsPort + ",\"wsClients\":[" +wsClients + "]},";
+  msg += "\"cal\":{\"calibrationEnable\":" + (String)calibration + ",\"offsetEn\":" + (String)offsetOn + ",\"mirrorX\":" + (String)mirrorX + ",\"mirrorY\":" + (String)mirrorY + ",\"rotation\":" + (String)rotation + ",\"offsetX\":" + (String)offsetX + ",\"offsetY\":" + (String)offsetY + "},";
   #if defined(HW_BETA)
     msg += "\"ir\":{\"averageCount\":" + (String)averageCount + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + "}";
   #else
@@ -541,4 +630,6 @@ void updateSetting(){
   // send message to client
   if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
   if (serialOutput) Serial.println(msg);
+  //Serial.print("webserver client: ");
+  //Serial.println(webServer.client());
 }

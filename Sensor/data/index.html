@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <link rel="stylesheet" href="style.css">
+  <title>Material Sensor</title>
+</head>
+
+<body id="index">
+
+  <script>
+    
+    
+  </script>
+
+  <div class="center">
+    <img src="banner.jpg" alt="Banner" style="width:600px">
+    <h1>Material Plane Sensor</h1>
+ 
+    <div class="waitMessage" id="waitMessage">
+      Establishing websocket connection with the sensor.<br>
+      Please wait.
+    </div>
+
+    <div id="mainBody" style="display:none">
+     <!-- Tab links -->
+    <div class="tab">
+      <button class="tabButtons active" id="StatusBtn" onclick="openTab('Status')">Status</button>
+      <button class="tabButtons" id="NetworkBtn" onclick="openTab('Network')">Network</button>
+      <button class="tabButtons" id="SensorBtn" onclick="openTab('Sensor')">IR Tracker</button>
+    </div>
+
+    <!-- Tab content -->
+    <div id="Status" class="tabContent">
+      <h3>Status</h3>
+      <div class="settings">
+        <label>Hardware Version:</label>
+        <labelRight id="hwVersion"></labelRight>
+      </div>
+      <div class="settings">
+        <label>Firmware Version:</label>
+        <labelRight id="fwVersion"></labelRight>
+      </div>
+      <div class="settings">
+        <label>Webserver Version:</label>
+        <labelRight id="webserverVersion"></labelRight>
+      </div>
+      <div class="settings">
+        <label>Debug Enable:</label>
+        <input type="checkbox" id="debugEn" name="debugEn">
+      </div>
+      <div class="settings">
+        <label>Serial Output:</label>
+        <input type="checkbox" id="serialOut" name="serialOut">
+      </div>
+
+      <hr>
+
+      <h3>Battery</h3>
+      <div class="settings">
+        <label>Charging State:</label>
+        <labelRight id="chargingState"></labelRight>
+      </div>
+      <div class="settings PAJsensor">
+        <label>USB Connected:</label>
+        <labelRight id="usbConnected"></labelRight>
+      </div>
+      <div class="settings">
+        <label>Voltage:</label>
+        <labelRight id="batteryVoltage"></labelRight>
+      </div>
+      <div class="settings">
+        <label>Percentage:</label>
+        <labelRight id="batteryPercentage"></labelRight>
+      </div>
+
+      <hr>
+      <div class="settingsBtn">
+        <label>Reset settings do default values:</label>
+        <input type="button" id="resetSettings" value="Reset">
+      </div>
+      <div class="settingsBtn">
+        <label>Restart sensor:</label>
+        <input type="button" id="restart" value="Restart">
+      </div>
+      
+    </div>
+
+    <div id="Network" class="tabContent">
+      <h3>Network Status</h3>
+  
+      <div class="settings">
+        <label>Connection status:</label>
+        <labelRight id="connectionStatus"></labelRight>
+      </div>
+      <div class="settings">
+        <label>SSID:</label>
+        <labelRight id="ssid"></labelRight>
+      </div>
+      <div class="settings">
+        <label>IP Address:</label>
+        <labelRight id="ipAddress"></labelRight>
+      </div>
+
+      <div class="settingsBtn">
+        <label>Name:</label>
+        <input type="text" name="deviceName" id="deviceName" value="">
+        <input type="button" id="updateDeviceName" value="Update">
+      </div>
+
+      <hr>
+
+      <h3>Access Points</h3>
+      <div class="settingsBtn">
+        <label>Scan for access points:</label>
+        <input type="button" id="scanWiFi" value="Scan">
+      </div>
+
+      <select name="APs" default="" id="APs" size="6" style="width:100%">
+      </select>
+
+      <div class="settingsBtn">
+        <label>Password:</label>
+        <input type="password" name="password" id="password">
+        <input type="text" name="SSID" id="SSID" style="display:none">
+        <input type="button" name="connect" id="connectWiFi" value="Connect">
+      </div>
+      
+      <br>
+
+      <hr>
+
+      <h3>Websocket</h3>
+      <div class="settings">
+        <label>Mode:</label>
+        <labelRight id="wsMode"></labelRight>
+      </div>
+      <div class="settingsBtn">
+        <label>Port:</label>
+        <input type="text" name="wsPort" id="wsPort" value="">
+        <input type="button" id="updatePort" value="Update">
+      </div>
+
+      <div class="settings">
+        <label>Connected Clients:</label>
+        <labelRight id="wsClients"></labelRight>
+      </div>
+    </div>
+
+    <div id="Sensor" class="tabContent">
+
+      <h2 class="expandable"><img src="right.png" class="expandableIcon" style="width:25px">Coordinates</h2>
+      <div class="collapsed">
+        <canvas id="stage" height="250" width="400"></canvas>
+      
+        <div class="form-group options">
+          <table style="float:right;text-align:center;width:100%">
+            <tr>
+              <th style="width:16.6%">Point</th>
+              <th style="width:16.6%">X</th>
+              <th style="width:16.6%">Y</th> 
+              <th class="PAJsensor" style="width:16.6%">Average Brightness</th>
+              <th style="width:16.6%">Maximum Brightness</th>
+              <th class="PAJsensor" style="width:16.6%">Area</th>
+            </tr>
+            <tr>
+              <td id="iteration0" style="color:grey">0</td>
+              <td id="cal_x0" style="color:grey">0</td>
+              <td id="cal_y0" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_ab0" style="color:grey">0</td>
+              <td id="cal_mb0" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_a0" style="color:grey">0</td>
+            </tr>
+            <tr>
+              <td id="iteration1" style="color:grey">1</td>
+              <td id="cal_x1" style="color:grey">0</td>
+              <td id="cal_y1" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_ab1" style="color:grey">0</td>
+              <td id="cal_mb1" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_a1" style="color:grey">0</td>
+            </tr>
+            <tr>
+              <td id="iteration2" style="color:grey">2</td>
+              <td id="cal_x2" style="color:grey">0</td>
+              <td id="cal_y2" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_ab2" style="color:grey">0</td>
+              <td id="cal_mb2" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_a2" style="color:grey">0</td>
+            </tr>
+            <tr>
+              <td id="iteration3" style="color:grey">3</td>
+              <td id="cal_x3" style="color:grey">0</td>
+              <td id="cal_y3" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_ab3" style="color:grey">0</td>
+              <td id="cal_mb3" style="color:grey">0</td>
+              <td class="PAJsensor" id="cal_a3" style="color:grey">0</td>
+            </tr>
+          </table>     
+        </div>
+
+        <BR CLEAR="right" />
+
+        <div class="form-group options">   
+          <table style="text-align:center;min-width:300px;max-width:300px">
+            <tr>
+                <th style="width:50%">ID</th>
+                <th style="width:50%">Command</th>
+            </tr>
+            <tr>
+                <td id="baseId" style="color:grey">0</td>
+                <td id="baseCmd" style="color:grey">0</td>
+            </tr>
+          </table>     
+        </div>
+
+      </div>
+
+      <hr>
+
+      <h2>Settings</h2>
+      <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Exposure</h3> 
+      <div class="collapsed">
+        <p class="notes PAJsensor">
+            'Auto Exposure' attempts to automatically configure the exposure settings. Place a base or the pen in a corner of the screen, and make sure the IR led is on (tilt the base, if necessary).
+            The procedure can take a few seconds, the settings will automatically be updated after the procedure.
+        </p>
+        <p class="notes PAJsensor">
+            'Exposure' sets the length of time the sensor will measure, higher values result in higher brightness.
+        </p>
+        <p class="notes">
+            'Frame Period' is the time between each measurement. Lower values increase responsiveness, but reduces the maximum exposure time (max exposure time = Frame Period - 2.7ms).
+        </p>
+        <p class="notes">
+            'Gain' is a brightness multiplier. Higher values will increase brightness, but also noise.
+        </p>
+        <div class="settings PAJsensor">
+            <label>Auto Exposure:</label>
+            <button id="autoExposure" type="button" style="width:50%">
+                <i></i> Auto Exposure
+            </button>
+        </div>
+        <div class="settings PAJsensor">
+            <label>Exposure (ms):</label>
+            <input type="range" min="2" max="1300" value="300" class="slider" id="exposure">
+            <input type="text" id="exposureNumber" value="3">
+        </div>
+        
+        <div class="settings">
+            <label>Frame Period (ms):</label>
+            <input type="range" min="50" max="1000" value="25" class="slider" id="framePeriod">
+            <input type="text" id="framePeriodNumber" value="25">
+        </div>
+        <div class="settings">
+            <label>Gain:</label>
+            <input type="range" min="10" max="80" value="20" class="slider" id="gain">
+            <input type="text" id="gainNumber" value="2">
+        </div>
+      </div>
+
+      <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Noise Filter</h3> 
+      <div class="collapsed">
+        <p class="notes PAJsensor">
+            Measured IR spots will be considered either as noise or part of a point. Each IR spot with maximum brightness higher than 'Minimum Brightness' (that is not directly neighboring other spots with high enough brightness) are considered individual points.<br>
+            Spots with lower brightness, but higher than 'Minimum Brightness' - 'Noise Treshold' will be considered as part of the nearest point (if there are any). Otherwise they will be considered noise and ignored.<br>
+            'Average Count' sets the amount of measurements the sensor takes an average. Higher values decrease noise, but also decrease responsiveness.
+        </p>
+        <p class="notes">
+          Measured IR spots with lower brightness than 'Minimum Brightness' will be ignored.<br>
+          'Average Count' sets the amount of measurements the sensor takes an average. Higher values decrease noise, but also decrease responsiveness.
+        </p>
+        <div class="settings">
+            <label>Minimum Brightness:</label>
+            <input type="range"min="0" max="255" value="127" class="slider" id="brightness">
+            <input type="text" id="brightnessNumber" value="127">
+        </div>
+        <div class="settings PAJsensor">
+            <label>Noise Treshold:</label>
+            <input type="range" min="0" max="255" value="20" class="slider" id="noise">
+            <input type="text" id="noiseNumber" value="20">
+        </div>
+        <div class="settings">
+            <label>Average Count:</label>
+            <input type="range" min="0" max="20" value="10" class="slider" id="average">
+            <input type="text" id="averageNumber" value="10">
+        </div>
+      </div>
+
+      <h3 class="expandable PAJsensor"><img src="right.png" class="expandableIcon" style="width:20px">Area Filter</h3> 
+      <div class="collapsed">
+        <p class="notes">
+          The area of each point is the amount of pixels that are considered part of the point. Areas smaller than 'Minimum Area' or bigger than 'Maximum Area' are ignored.
+        </p>
+        <div class="settings">
+            <label>Minimum Area:</label>
+            <input type="range" min="0" max="255" value="127" class="slider" id="minArea">
+            <input type="text" id="minAreaNumber" value="127">
+        </div>
+        <div class="settings">
+            <label>Maximum Area:</label>
+            <input type="range" min="0" max="255" value="127" class="slider" id="maxArea">
+            <input type="text" id="maxAreaNumber" value="127">
+        </div>
+      </div>
+
+      <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Transform</h3>  
+      <div class="collapsed">
+        <p class="notes">
+            'Mirror X' and 'Mirror Y' will mirror the point's location in X and Y direction.<br>
+            'Rotate' will rotate everything 90 degrees (X becomes Y and Y becomes X).<br>
+            'X Offset' and 'Y Offset' will shift the measured point by the set value to fix alignment issues
+        </p>
+        <div class="settings">
+            <label>Mirror X:</label>
+            <input type="checkbox" id="mirX">
+        </div>
+        <div class="settings">
+            <label>Mirror Y:</label>
+            <input type="checkbox" id="mirY">
+        </div>
+        <div class="settings">
+            <label>Rotate:</label>
+            <input type="checkbox" id="rot">
+        </div>
+        <div class="settings">
+            <label>X Offset:</label>
+            <input type="range" min="-100" max="100" value="0" class="slider" id="xOffset">
+            <input type="text" id="xOffsetNumber" value="0">
+        </div>
+        <div class="settings">
+            <label>Y Offset:</label>
+            <input type="range" min="-100" max="100" value="0" class="slider" id="yOffset">
+            <input type="text" id="yOffsetNumber" value="0">
+        </div>
+      </div>
+
+      <hr>
+
+      <h2 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Calibration</h2>  
+      <div class="collapsed">
+        <p class="notes">
+            Calibration and offset are enabled when the 'Calibration Enabled' and 'Offset Enabled' boxes are checked.<br>
+            'Calibration Method' can be set to either 'Single Point' calibration (calibrate each calibration point separately) or 'Multipoint' calibration (calibrate all calibration points at the same time).<br>
+            The 'Calibrate' button will start the calibration procedure.
+        </p>
+        <div class="settings">
+            <label>Calibration Enabled:</label>
+            <input type="checkbox" id="calEn">
+        </div>
+        <div class="settings">
+            <label>Offset Enabled:</label>
+            <input type="checkbox" id="offsetEn">
+        </div>
+
+        <div class="settings" style="display:none">
+            <label>Calibration Method:</label>
+            <select id="calMethod">
+                <option value="SinglePoint">Single Point</option>
+                <option value="MultiPoint">Multi Point</option>
+                <option value="Offset">Offset</option>
+            </select> 
+            <input type="button" id="calBtn" value="Calibrate">
+        </div>
+      </div> 
+
+    </div>
+
+    <div class="footer">   
+      <a class="hyperlink" href="https://github.com/cdeenen/materialplane" target="_blank">GitHub</a> |
+      <a class="hyperlink" href="https://github.com/CDeenen/MaterialPlane/wiki" target="_blank">Wiki</a> |
+      <a class="hyperlink" href="https://github.com/CDeenen/MaterialPlane_Hardware/releases" target="_blank">Releases</a> |
+      <a class="hyperlink" href="https://discord.gg/3hd4G6TkmA" target="_blank">Discord</a> |
+      <a class="hyperlink" href="https://www.patreon.com/materialfoundry" target="_blank">Patreon</a>
+    </div>
+
+  </div>
+
+  <script src="variables.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

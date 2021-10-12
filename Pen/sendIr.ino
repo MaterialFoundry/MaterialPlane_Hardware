@@ -14,37 +14,37 @@
  */
 void sendIR(byte command){
   //Create data integer from the 16 bit serial number and 8 bit command
-  uint32_t data = serialNumber<<8 | command;
+  uint32_t data = (uint32_t)serialNumber<<8 | command;
 
   //Send start bits
-  TCA0.SINGLE.CMP2 = PWM_LOW;
+  setPWM(PWM_LOW);
   delayMicroseconds(IR_LONG);
 
-  TCA0.SINGLE.CMP2 = PWM_HIGH;
+  setPWM(PWM_HIGH);
   delayMicroseconds(IR_SHORT);
 
   //Send 24 bit data
   for (int i=23; i>=0; i--) {
     if ((data>>i)&1) {
-      TCA0.SINGLE.CMP2 = PWM_LOW;
+      setPWM(PWM_LOW);
       delayMicroseconds(IR_SHORT);
-      TCA0.SINGLE.CMP2 = PWM_HIGH;
+      setPWM(PWM_HIGH);
       delayMicroseconds(IR_LONG);
     }
     else {
-      TCA0.SINGLE.CMP2 = PWM_LOW;
+      setPWM(PWM_LOW);
       delayMicroseconds(IR_SHORT);
-      TCA0.SINGLE.CMP2 = PWM_HIGH;
+      setPWM(PWM_HIGH);
       delayMicroseconds(IR_SHORT);
     }
   }
   
   //Stop bit
-  //analogWrite(IR_LED_F,PWM_LOW);
-  TCA0.SINGLE.CMP2 = PWM_LOW;
+  setPWM(PWM_LOW);
   delayMicroseconds(IR_SHORT);
 
-  TCA0.SINGLE.CMP2 = PWM_HIGH;
+  //Set IR led high
+  setPWM(PWM_HIGH);
   
   delay(50);
 }

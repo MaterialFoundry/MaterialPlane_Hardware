@@ -1,0 +1,2 @@
+const ipAddress = "";
+const wsPort = "";

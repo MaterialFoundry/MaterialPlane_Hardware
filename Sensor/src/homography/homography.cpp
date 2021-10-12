@@ -75,15 +75,15 @@ void homography::calculateCoordinates(int x, int y){
     Matrix.Multiply((mtx_type*)TP, (mtx_type*)_H, 1, 3, 3, (mtx_type*)outputTemp);
     outputTemp[0] /= outputTemp[2];
     outputTemp[1] /= outputTemp[2];
-    _x = round(outputTemp[0]);
-    _y = round(outputTemp[1]);
+    _x = (uint16_t)outputTemp[0];
+    _y = (uint16_t)outputTemp[1];
 }
 
-int homography::getX(){
+uint16_t homography::getX(){
     return _x;
 }
 
-int homography::getY(){
+uint16_t homography::getY(){
     return _y;
 }
 

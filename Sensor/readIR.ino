@@ -40,9 +40,6 @@ uint8_t getCoordinates(){
   //Get data from the sensor
   IRsensor.getOutput(1);
 
-  //for (int i=0; i<4; i++) Serial.print("\t" + (String)i + " " + (String)IRsensor.pointStorage[i][1] + " " + (String)IRsensor.pointStorage[i][2] + " " + (String)IRsensor.pointStorage[i][4]);
-  //Serial.println();
-
   //Check if max brightness of all points is 0 (HW_BETA) or y coordinate is lower than 5452 (other HW). In which case no IR point was detected.
   uint8_t pointsMeasured = 0;
   
@@ -54,7 +51,6 @@ uint8_t getCoordinates(){
     #endif
       pointsMeasured++;
   }
-  //Serial.println("\tPoints: " + (String)pointsMeasured);
       
   if (pointsMeasured == 0) {
     if (invalidPointCount < 255) invalidPointCount++;
@@ -80,8 +76,8 @@ uint8_t getCoordinates(){
   
   //Calculate values for all points
   for (int i=0; i<maxIRpoints; i++){
-    uint16_t xCoord = IRsensor.pointStorage[i][1];  
-    uint16_t yCoord = IRsensor.pointStorage[i][2];  
+    float xCoord = IRsensor.pointStorage[i][1];  
+    float yCoord = IRsensor.pointStorage[i][2];  
     uint16_t brightness = IRsensor.pointStorage[i][4];
 
     if (debug) Serial.print("Point " + (String)i + ": X: " + (String)xCoord + "\tY: " + (String)yCoord + "\tBrightness: " + (String)brightness);
@@ -99,15 +95,17 @@ uint8_t getCoordinates(){
       if (debug) Serial.print("\tCX: " + (String)xCoord + "\tCY: " + (String)yCoord);
     }
 
+    if (rotation){
+      float xTemp = xCoord;
+      xCoord = yCoord;
+      yCoord = xTemp;
+    }
+
     if (mirrorX)  xCoord = 4095-xCoord;
     if (mirrorY)  yCoord = 4095-yCoord;
 
-    if (rotation){
-      uint16_t xTemp = xCoord;
-      uint16_t yTemp = yCoord;
-      xCoord = xTemp;
-      yCoord = yTemp;
-    }
+    xCoord += offsetX;
+    yCoord += offsetY;
 
     if (debug) Serial.println();
 
@@ -132,7 +130,7 @@ uint8_t getCoordinates(){
 
 void printMsg(){
   bool dataStarted = false;
-  //Serial.println((String)validPoints + "\t" + (String)validPointsOld);
+  
   if (validPoints == 0 && validPointsOld == 0 && debug == false) return;
   
   //Clear the message buffer
@@ -157,7 +155,6 @@ void printMsg(){
       #endif
       sprintf(msgBuffer+strlen(msgBuffer),"}");
       dataStarted = true;
-      //Serial.print((String)i + ": X:" + (String)coordinates[i][0] + "\tY:" + (String)coordinates[i][1] + "\tB:" + (String)maxBrightness[i] + "\t\t");
     }
     else if (validPointsArray[i] == true) {
       validPointsArray[i] = false;
@@ -226,7 +223,6 @@ void getCal(){
         cal_lastCoordinates[0] = coordinates[0][0];
         cal_lastCoordinates[1] = coordinates[0][1];
       }
-    //Serial.println("\tPoint0: X: " + (String)cal_lastCoordinates[0] + "\tY: " + (String)cal_lastCoordinates[1] + "\tBrightness: " + (String)IRsensor.pointStorage[0][3]);
     delay(25);
   }
   else if (calibrationProcedure == CALIBRATION_CANCEL) {
@@ -248,7 +244,7 @@ void getCal(){
     calibrationProcedure = CALIBRATION_ACTIVE;
     cal_localCalCoordinates[cal_count][0] = cal_lastCoordinates[0];
     cal_localCalCoordinates[cal_count][1] = cal_lastCoordinates[1];
-    //Serial.println("Calibration values point " + (String)(cal_count+1) + "/4\tX: " + (String)cal_lastCoordinates[0] + "\tY: " + (String)cal_lastCoordinates[1]);
+
     String msg = "{\"status\":\"calibration\",\"state\":" + (String)(cal_count+1) + ",\"x\":" + (String)cal_lastCoordinates[0] + ",\"y\":" + (String)cal_lastCoordinates[1] + "}";
     if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
     if (serialOutput) Serial.println(msg);
@@ -281,3 +277,125 @@ void getCal(){
     calibrationRunning = false;
   }
 }
+
+#define EXP_STOPPED           0
+#define EXP_PRESTART          1
+#define EXP_START             2
+#define EXP_SETEXP            3
+#define EXP_SETMINBRIGHTNESS  4
+
+uint8_t autoExposureProcedure = EXP_STOPPED;
+uint8_t autoExposureStartCounter = 0;
+float autoExposeExposure = 0.1;
+float autoExposeGain = 1;
+uint8_t autoExposureMinBrightness = 30;
+
+void autoExpose() {
+  #if defined(HW_DIY_BASIC) 
+
+  #elif defined(HW_DIY_FULL)
+
+  #elif defined(HW_BETA)
+
+    if (autoExposureProcedure == EXP_STOPPED) return;
+  
+    if (autoExposureProcedure == EXP_START) {
+      Serial.println("Starting auto exposure\nMake sure you have 1 base or the pen in view of the sensor with its IR LED on.");
+      autoExposeExposure = 0.1;
+      autoExposeGain = 1;
+      autoExposureStartCounter = 0;
+      IRsensor.setFramePeriod(25);
+      IRsensor.setPixelBrightnessThreshold(autoExposureMinBrightness);
+      IRsensor.setPixelNoiseTreshold(0);
+      IRsensor.setGain(autoExposeGain);
+      setEepromAvg(0);
+      IRsensor.setExposureTime(autoExposeExposure);
+      autoExposureProcedure = EXP_PRESTART;
+    }
+    if (autoExposureProcedure == EXP_PRESTART) {
+      autoExposureStartCounter++;
+      if (autoExposureStartCounter > 10) autoExposureProcedure = EXP_SETEXP;
+    }
+    if (autoExposureProcedure == EXP_SETEXP) {
+      
+      //Get the brightest point
+      uint8_t brightestPoint = 0;
+      uint8_t brightestBrightness = 0;
+      for (int i=0; i<16; i++) {
+        if (IRsensor.pointStorage[i][4] > brightestBrightness) {
+          brightestPoint = i;
+          brightestBrightness = IRsensor.pointStorage[i][4];
+        }
+      }
+      
+      if (brightestBrightness >= 200) {
+        autoExposureProcedure = EXP_SETMINBRIGHTNESS;
+        autoExposureMinBrightness = 0;
+        return;
+      }
+      autoExposeExposure += 0.25;
+      if (autoExposeExposure > 13) {
+        autoExposeGain += 1;
+        IRsensor.setGain(autoExposeGain);
+        autoExposeExposure = 5;
+        if (autoExposeGain > 8) {
+          autoExposureProcedure = EXP_STOPPED;
+          return;
+        }
+      }
+      IRsensor.setExposureTime(autoExposeExposure);
+    }
+    if (autoExposureProcedure == EXP_SETMINBRIGHTNESS) {
+      //Get the brightest and second brightest point
+      uint8_t brightestPoint = 0;
+      uint8_t secondBrightestPoint = 0;
+      uint8_t brightestBrightness = 0;
+      uint8_t secondBrightestBrightness = 0;
+      uint8_t points = 0;
+      for (int i=0; i<16; i++) {
+        if (IRsensor.pointStorage[i][4] > 0) points++;
+      
+        if (IRsensor.pointStorage[i][4] > brightestBrightness) {
+          brightestPoint = i;
+          brightestBrightness = IRsensor.pointStorage[i][4];
+        }
+        else if (IRsensor.pointStorage[i][4] > secondBrightestBrightness) {
+          secondBrightestPoint = i;
+          secondBrightestBrightness = IRsensor.pointStorage[i][4];
+        }
+      }
+  
+      if (secondBrightestBrightness > 0) {
+        autoExposureMinBrightness = 0.5*(brightestBrightness - secondBrightestBrightness);
+      }
+      else
+        autoExposureMinBrightness = 25;
+  
+      float framePeriod = IRsensor.getExposureTime() + 2.7;
+      if (framePeriod < 5) framePeriod = 5;
+      else if (framePeriod > 100) framePeriod = 100;
+      
+      String msg = "{\"status\":\"Auto Exposure Done\"}";
+      // send message to client
+      if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+      if (serialOutput) Serial.println(msg);
+  
+      IRsensor.setPixelBrightnessThreshold(autoExposureMinBrightness);
+      IRsensor.setFramePeriod(framePeriod);
+  
+      setEepromAvg(0);
+      setEepromIrGain(IRsensor.getGain());
+      setEepromIrBrightness(autoExposureMinBrightness);
+      setEepromIrFramePeriod(framePeriod);
+      setEepromIrExposure(IRsensor.getExposureTime());
+      setEepromIrNoise(0);
+      
+      updateSetting();
+      
+      autoExposureProcedure = EXP_STOPPED;
+      return;
+    }
+    
+    #endif
+}
+  

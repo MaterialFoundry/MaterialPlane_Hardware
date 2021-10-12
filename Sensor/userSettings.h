@@ -12,8 +12,8 @@
  * Uncomment the hardware you're using
  */
 //#define HW_DIY_BASIC
-#define HW_DIY_FULL
-//#define HW_BETA
+//#define HW_DIY_FULL
+#define HW_BETA
 
 //=============================================================
 //Basic DIY Sensor config
@@ -40,6 +40,12 @@
   #define LEDL_G  27
   #define LEDR_R  26
   #define LEDR_G  25
+
+  //Max intensity for LEDs, max 255
+  #define LEDL_R_INTENSITY  50
+  #define LEDL_G_INTENSITY  255
+  #define LEDR_R_INTENSITY  50
+  #define LEDR_G_INTENSITY  255
   
   #define USB_ACTIVE 32
   
@@ -56,10 +62,18 @@
   #define LEDL_R  13
   #define LEDL_G  14
 
+  //Max intensity for LEDs, max 255
+  #define LEDL_R_INTENSITY  50
+  #define LEDL_G_INTENSITY  255
+  #define LEDR_R_INTENSITY  50
+  #define LEDR_G_INTENSITY  255
+
   //Battery voltage monitor pins
   #define VBAT_EN     32
   #define VBAT_SENSE  33
   #define VBAT_STAT   25
+
+  #define CHARGE_EN   26
   
   #define USB_ACTIVE 27
 
@@ -77,7 +91,7 @@
  * WIFI_TIMEOUT
  * When attempting to connect to the wifi, stop trying after WIFI_TIMEOUT amount of seconds
  */
- #define WIFI_TIMEOUT 5
+ #define WIFI_TIMEOUT 10
 
 /**
  * WS_PORT_DEFAULT

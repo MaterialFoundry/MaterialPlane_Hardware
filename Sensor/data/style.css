@@ -1,0 +1,165 @@
+:root {
+    margin: 0; 
+    padding: 0; 
+    background-color: black; 
+    width: 600px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    font-size: 12pt;
+}
+
+h1, h2, h3, h4 {
+    display: block;
+    margin-top: 0.67em;
+    margin-bottom: 0.67em;
+    margin-left: 0;
+    margin-right: 0;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 3em;
+    text-align: center;
+    color: white;
+}
+
+h2 {
+    font-size: 2em;
+}
+
+h3 {
+    font-size: 1.5em;
+}
+
+.center {
+    margin: auto;
+    width: 100%;
+    padding: 10px 50px;
+}
+
+.waitMessage {
+    color: white;
+    text-align: center;
+    width: 100%;
+}
+
+/* Style the tab */
+.tab {
+    overflow: hidden;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+    background-color: inherit;
+    float: left;
+    border-width: 2px;
+    border-color: white;
+    border-style: solid;
+    border-radius: 10px 10px 0px 0px;
+    background-color: #555;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    width: 33.3%;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+input[type="button"], 
+input[type="range"],
+input[type="checkbox"],
+select,
+button {
+    cursor: pointer;
+}
+
+.settings {
+    display:flex; 
+    width:100%;
+}
+.settings label {
+    margin-right: auto;
+}
+.settings labelRight {
+    margin-left: auto;
+}
+.settings input[type="range"] {
+    width: 40%;
+}
+.settings input[type="text"] {
+    width: 10%;
+}
+.settings input[type="checkbox"] {
+    margin-left: auto;
+}
+.settings select {
+    width: 25%;
+}
+
+.settingsBtn {
+    display:flex; 
+    width:100%;
+}
+.settingsBtn label {
+    margin-right: auto;
+}
+.settingsBtn input[type="text"],
+.settingsBtn input[type="password"] {
+    width: 25%;
+}
+.settingsBtn input[type="button"] {
+    width: 15%;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+    background-color: #777;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+    background-color: #ccc;
+    border-color: white white #ccc white;
+}
+
+/* Style the tab content */
+.tabContent {
+    display: none;
+    padding: 6px 12px;
+    background-color: #ccc;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    border-radius: 0px 0px 10px 10px;
+} 
+
+table, th, td {
+    border: 1px solid black;
+}
+
+canvas {
+    border: 2px solid rgb(151, 149, 149);
+    margin: auto;
+    padding: 10px 50px;
+}
+
+.notes {
+    font-size: 0.8em;
+}
+
+.expandable {
+    cursor: pointer;
+}
+
+.collapsed {
+    display:none;
+}
+
+.footer {
+    font-size: 0.85em;
+    text-align: center;
+    color: gray;
+}
+
+.hyperlink {
+    color: blue;
+}

@@ -47,8 +47,9 @@ void wsPing() {
     String msg = "{\"status\":\"ping\",\"source\":\"";
     if (calibrationProcedure == CALIBRATION_INACTIVE) msg += "mainLoop";
     else msg += "calibration";
-    msg+="\",\"battery\":{\"voltage\":"+(String)vBat+",\"charging\":"+(String)chargeState+"}}";
+
+    msg += "\",\"battery\":{\"voltage\":" + (String)vBat + ",\"percentage\":" + (String)batPercentage + ",\"charging\":" + (String)chargeState + ",\"usbActive\":" + (String)usbActive + "}}";
     webSocketServer.broadcastTXT(msg);
-    if (debug) Serial.println(msg);
+    if (serialOutput) Serial.println(msg);
   }
 }
