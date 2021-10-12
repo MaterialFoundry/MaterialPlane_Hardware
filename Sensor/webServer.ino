@@ -10,8 +10,8 @@ String insertString(String indexString, String startString, int startOffset, Str
 
 void updateServer() {
   
-  char homePath[14] = "/variables.js";
-  String f = readFile(SPIFFS,homePath);
+  char path[14] = "/variables.js";
+  String f = readFile(SPIFFS,path);
   
   String message = "";
      
@@ -25,7 +25,7 @@ void updateServer() {
 
   char fChar[f.length()];
   stringToChar(f,fChar);
-  writeFile(SPIFFS, homePath, fChar);
+  writeFile(SPIFFS, path, fChar);
 }
 
 void handleRoot() {
@@ -82,10 +82,13 @@ String readFile(fs::FS &fs, const char * path){
   if(!file || file.isDirectory()){
     if(debug) Serial.println("- empty file or failed to open file");
     if (path == "/") {
-      if(debug) Serial.println("test");
+      file.close();
       return getEmptyIndex();
     }
-    else return String();
+    else {
+      file.close();
+      return String();
+    }
   }
   if(debug) Serial.println("- read from file:");
   String fileContent;
@@ -93,6 +96,7 @@ String readFile(fs::FS &fs, const char * path){
     fileContent+=String((char)file.read());
   }
   //Serial.println(fileContent);
+  file.close();
   return fileContent;
 }
 
@@ -103,11 +107,19 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
     Serial.println("- failed to open file for writing");
     return;
   }
-  if(debug && file.print(message)){
-    Serial.println("- file written");
-  } else {
-    Serial.println("- write failed");
+
+  int bytesWritten = file.print(message);
+  
+  if (debug) {
+    Serial.println("Bytes Written: " + (String)bytesWritten);
+    if(bytesWritten >= 0){
+      Serial.println("- file written");
+    } else {
+      Serial.println("- write failed");
+    }
   }
+  
+  file.close();
 }
 
 String getEmptyIndex() {

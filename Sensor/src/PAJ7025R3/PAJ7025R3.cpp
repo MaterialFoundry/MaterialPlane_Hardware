@@ -21,8 +21,8 @@ void PAJ7025R3::initialize(){
     initialize();
     return;
   }
-  else
-    Serial.println("Connected to sensor");
+  //else
+  //  Serial.println("Connected to sensor");
 
   setFrameSubstraction(0);
   //setFramePeriod(FRAME_PERIOD);
