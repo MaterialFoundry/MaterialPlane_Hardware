@@ -119,19 +119,7 @@ void setup() {
 }
 
 void loop() {
-    while(IDsensor.available()){
-      char* rcvGroup;
-      uint32_t result = IDsensor.read(rcvGroup);
-      if (rcvGroup == "MP" && result) {
-          irMode = result&255;
-          irAddress = result>>8;
-          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
-      }
-      else if (result) {
-        sendIRcode(rcvGroup, result);
-      }
-    }
-
+    
   if (WiFi.status() != WL_CONNECTED) {
     dnsServer.processNextRequest();
   }
@@ -152,7 +140,20 @@ void loop() {
   getCal();
 
   #if defined(HW_BETA)
-  
+
+    while(IDsensor.available()){
+      char* rcvGroup;
+      uint32_t result = IDsensor.read(rcvGroup);
+      if (rcvGroup == "MP" && result) {
+          irMode = result&255;
+          irAddress = result>>8;
+          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
+      }
+      else if (result) {
+        sendIRcode(rcvGroup, result);
+      }
+    }
+    
     if (exposureDone) {
       exposureDone = false;
       IRtimer = millis();
