@@ -36,17 +36,17 @@
 /*
  * PWM Settings
  */
-#define PWM_COUNT       131  //20 for 1 MHz, 131 for 5MHz
+#define PWM_COUNT       129  //129 for 5MHz
 #define PWM_PRESCALER   0
 #define PWM_LOW         PWM_COUNT/2  
-#define PWM_HIGH        0           //should be 255
-#define PWM_OFF         131           //should be 0
+#define PWM_HIGH        0           
+#define PWM_OFF         PWM_COUNT  
 
 /*
  * IR Timing Settings
  */
-#define IR_SHORT  450   //us
-#define IR_LONG   900   //us
+#define IR_SHORT  480   //us
+#define IR_LONG   980   //us
 
 /*
  * ID Settings

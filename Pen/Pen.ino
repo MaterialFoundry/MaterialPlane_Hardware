@@ -1,5 +1,5 @@
 /*
- * Board: megaTinyCore => ATtiny3226... (without optiboot)
+ * Board: megaTinyCore => ATtiny3226/3216/1626...
  * Chip or Board: ATtiny416
  * Clock: 5MHz
  * Rest is default

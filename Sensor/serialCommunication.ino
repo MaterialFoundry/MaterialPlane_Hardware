@@ -1,3 +1,4 @@
+
 uint8_t checkSerial() {
   return analyzeMessage(Serial.readStringUntil('\n'));
 }
@@ -632,4 +633,12 @@ void updateSetting(){
   if (serialOutput) Serial.println(msg);
   //Serial.print("webserver client: ");
   //Serial.println(webServer.client());
+}
+
+void sendIRcode(char* rcvGroup, uint32_t result) {
+  if (debug) Serial.println("IR rec: " + (String)rcvGroup + '\t' + (String)result);
+  String msg = "{\"status\":\"IRcode\",\"data\":{\"protocol\":\"" + (String)rcvGroup + "\",\"code\":" + (String)result + "}}";
+
+  if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+  if (serialOutput) Serial.println(msg);
 }

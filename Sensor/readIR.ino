@@ -1,5 +1,3 @@
-
-
 float coordinates[16][2], maxBrightness[16];
 uint16_t area[16];
 uint8_t validPoints = 0;
@@ -398,4 +396,3 @@ void autoExpose() {
     
     #endif
 }
-  

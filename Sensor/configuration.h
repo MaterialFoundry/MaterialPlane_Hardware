@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION        "2.1.0"
+#define FIRMWARE_VERSION        "2.1.1"
 
 #define DEVICE_NAME             "materialsensor"
 
@@ -103,4 +103,8 @@
 #define LEDL_G_CH               1
 #define LEDR_R_CH               2
 #define LEDR_G_CH               3
-#define LED_STEPSIZE            LEDL_R_INTENSITY/50
+
+#define CHARGING_LED_TIMER      20
+#define CHARGING_LED_MIN        1
+#define CHARGING_LED_FREQ       2.5
+#define CHARGING_LED_STEPSIZE   0.001*(LEDL_R_INTENSITY-CHARGING_LED_MIN)/(0.001*CHARGING_LED_TIMER*CHARGING_LED_FREQ)

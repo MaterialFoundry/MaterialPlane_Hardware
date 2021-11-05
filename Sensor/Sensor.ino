@@ -1,9 +1,3 @@
-/**
- * Board: ESP32 Arduino => ESP32 Dev Module
- * CPU Frequency: 240MHz (WiFi/BT)
- * Flash Frequency: 80MHz
- */
-
 #include "configuration.h"
 #include "userSettings.h"
 #include "src/WebSocketsServer/src/WebSocketsServer.h"
@@ -17,6 +11,8 @@
 #include "FS.h"
 #include "SPIFFS.h"
 #include "src/ESP32WebServer/src/ESP32WebServer.h"
+#include "esp_adc_cal.h"
+
 
 #if defined(HW_DIY_BASIC)
   #include "src/wiiCam/wiiCam.h"
@@ -29,6 +25,7 @@
 #elif defined(HW_BETA)
   #include "src/PAJ7025R3/PAJ7025R3.h"
   #include "src/IR32/src/IRRecv.h"
+  
   PAJ7025R3 IRsensor(PAJ_CS);
   IRRecv IDsensor;
 #endif
@@ -39,14 +36,16 @@
 #define WS_MODE_SERVER 1
 #define WS_MODE_CLIENT 2
 
-ESP32WebServer webServer(80);
-DNSServer dnsServer;
 
+/**
+ * IR Sensor variables
+ */
+unsigned long IRtimer = 0;
+unsigned long IRtimeout = 0;
+volatile bool exposureDone = false;
 bool debug = false;
 bool serialOutput = false;
-
 uint8_t maxIRpoints = 16;
-
 bool calibration = false;
 bool offsetOn = false;
 bool mirrorX = false;
@@ -58,52 +57,81 @@ bool calOpen = true;
 volatile uint8_t calibrationProcedure = 0;
 bool calibrationRunning = false;
 float framePeriod = 50;
-unsigned long timer = 0;
 uint8_t averageCount = 10;
 
+/**
+ * Websocket variables
+ */
 uint8_t wsMode = WS_MODE_SERVER;
 uint16_t wsPort = WS_PORT_DEFAULT;
 String wsIP = "";
 bool wsConnected = false;
 uint8_t wsClients = 0;
+unsigned long pingTimer = 0;
 
-uint16_t scale[2];
-
+/**
+ * ID sensor variables
+ */
 uint8_t irMode;
 uint16_t irAddress;
 
+/**
+ * Battery monitoring variables
+ */
 float vBat = 0;
 uint8_t chargeState = 0;
 bool lowBattery = false;
+uint8_t batteryCounter = 0;
 
-unsigned long pingTimer = 0;
-unsigned long IRtimeout = 0;
-volatile bool exposureDone = false;
 
+/**
+ * WiFi Variables
+ */
 String ssidString = "";
 String passwordString = "";
 String nameString = "";
 
-uint8_t batteryCounter = 0;
+/**
+ * LED variables
+ */
+unsigned long ledTimer = 0;
+unsigned long leftLedTimer = 0;
+
+float batStorage = 0;
+uint16_t chargeCounter = 0;
+uint16_t chargeSum = 0;
+bool usbActive = false;
+uint8_t usbCounter = 0;
+uint8_t batPercentage = 0;
+
+
+ESP32WebServer webServer(80);
+DNSServer dnsServer;
+WebSocketsServer webSocketServer = WebSocketsServer(wsPort);
+homography cal;
 
 void IRAM_ATTR pajInterruptHandler(){
   exposureDone = true;
 }
-
-bool noneCheck = false;
-
-unsigned long IRtimer = 0;
-unsigned long ledTimer = 0;
-unsigned long leftLedTimer = 0;
-
-WebSocketsServer webSocketServer = WebSocketsServer(wsPort);
-homography cal;
 
 void setup() {
   initialization();
 }
 
 void loop() {
+    while(IDsensor.available()){
+      char* rcvGroup;
+      uint32_t result = IDsensor.read(rcvGroup);
+      if (rcvGroup == "MP" && result) {
+          irMode = result&255;
+          irAddress = result>>8;
+          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
+      }
+      else if (result) {
+        sendIRcode(rcvGroup, result);
+      }
+    }
+
   if (WiFi.status() != WL_CONNECTED) {
     dnsServer.processNextRequest();
   }
@@ -122,27 +150,16 @@ void loop() {
   webSocketServer.loop();
 
   getCal();
-    
+
   #if defined(HW_BETA)
+  
     if (exposureDone) {
       exposureDone = false;
       IRtimer = millis();
-      timer = micros();
       readIR();
       autoExpose();
     }
-
-    while(IDsensor.available()){
-      char* rcvGroup;
-      uint32_t result = IDsensor.read(rcvGroup);
-      //Serial.println("IR ID sensor0:" + (String)result + "\tAddress: " + (String)(result>>8) + "\tMode: " + (String)(result&255));
-      if (rcvGroup == "MP" && result) {
-          irMode = result&255;
-          irAddress = result>>8;
-          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
-      }
-    }
-  
+    
     if (millis()-IRtimeout >= 10) {
       bool productId = IRsensor.checkProductId();
       //Serial.println("ProductID: " + (String)IRsensor.checkProductId());
@@ -153,6 +170,7 @@ void loop() {
       }
       IRtimeout = millis();
     }
+    
   #else
     if (millis() - IRtimer > framePeriod) {
       IRtimer = millis();
@@ -168,12 +186,13 @@ void loop() {
       else                                        setRightLED(false);
     } 
 
-    if (millis()-leftLedTimer >= 20) {
-      setLeftLED(chargeState);
+    if (millis()-leftLedTimer >= CHARGING_LED_TIMER) {
       leftLedTimer = millis();
+      setLeftLED(chargeState);
     }
   #elif defined(HW_BETA)
     if (millis()-ledTimer >= 100){
+      ledTimer = millis();
       batteryCounter++;
       
       //Check battery voltage every second
@@ -181,25 +200,18 @@ void loop() {
         batteryCounter = 0;
         getBatteryVoltage();
       }
-    
-      ledTimer = millis();
+      
       if (webSocketServer.connectedClients() > 0) setRightLED(true);
       else                                        setRightLED(false);
     }    
                                      
-    if (millis()-leftLedTimer >= 20) {
-      setLeftLED(chargeState);
+    if (millis()-leftLedTimer >= CHARGING_LED_TIMER) {
       leftLedTimer = millis();
+      setLeftLED(chargeState);
     }
   #endif
+  
 }
-
-float batStorage = 0;
-uint16_t chargeCounter = 0;
-uint16_t chargeSum = 0;
-bool usbActive = false;
-uint8_t usbCounter = 0;
-uint8_t batPercentage = 0;
 
 void getBatteryVoltage() {
   #if defined(HW_DIY_FULL)
@@ -221,6 +233,7 @@ void getBatteryVoltage() {
       }
       setLeftLED(chargeState);
       vBat = processBattery(batStorage/chargeCounter);
+      batPercentage = getBatteryPercentage(vBat);
       if (debug) Serial.println("Battery Voltage: " + (String)vBat + "V\tCharge Sum: " + (String)chargeSum + "\tCharge State: " + (String)chargeState);
       batStorage = 0;
       chargeSum = 0;
@@ -239,7 +252,8 @@ void getBatteryVoltage() {
     unsigned long bat = 0;
     for (int i=0; i<10; i++) bat += analogRead(VBAT_SENSE);
     bat *= 0.1;
-    vBat = processBattery(bat*3.1/(4096*0.68));
+    vBat = processBattery((float)readADC_Cal(bat)*1.468/1000);
+
     batPercentage = getBatteryPercentage(vBat);
     if (debug) Serial.println("Battery Voltage: " + (String)vBat + "V\tPercentage: " + (String)batPercentage + "%\tCharge Sum: " + (String)chargeSum + "\tCharge State: " + (String)chargeState);
 
@@ -255,6 +269,14 @@ void getBatteryVoltage() {
     //Enable charging
     digitalWrite(CHARGE_EN,LOW);
   #endif
+}
+
+uint32_t readADC_Cal(int ADC_Raw)
+{
+  esp_adc_cal_characteristics_t adc_chars;
+  
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 1100, &adc_chars);
+  return(esp_adc_cal_raw_to_voltage(ADC_Raw, &adc_chars));
 }
 
 float voltageStorage[10] = {0,0,0,0,0,0,0,0,0,0};
@@ -276,59 +298,65 @@ float processBattery(float vbat) {
  */
 uint8_t getBatteryPercentage(float v) {
   if (v > 4.2) v = 4.20;
-
-  if (v < 3.25) return round(80*(v-3.00));
-  else if (v >= 3.25 && v < 3.75) return round(20 + 120*(v-3.25));
-  else if (v >= 3.75 && v < 4.00) return round(80 + 60*(v-3.75));
-  else if (v >= 4.00) return round(95 + 50*(v-4.00));
-  else return 0;
+  int8_t percentage = 0;
+  if (v < 3.25) percentage =  round(80*(v-3.00));
+  else if (v >= 3.25 && v < 3.75) percentage =  round(20 + 120*(v-3.25));
+  else if (v >= 3.75 && v < 4.00) percentage =  round(80 + 60*(v-3.75));
+  else if (v >= 4.00) percentage =  round(95 + 50*(v-4.00));
+  if (percentage < 0) percentage = 0;
+  else if (percentage > 100) percentage = 100;
+  return percentage;
 }
 
 void connectWifi(const char* ssid, const char* password, uint8_t ssidLength, uint8_t passwordLength) {
+  Serial.println("\nStarting network configuration");
   ssidString = "";
   for (int i=0; i<ssidLength; i++) ssidString += ssid[i];
   
   if (WiFi.isConnected()) {
     Serial.println("Disconnecting from: \"" + (String)WiFi.SSID() + "\"");
   }
-  Serial.print("Attempting to connect to \"" + (String)ssid + "\". Please wait");
-  WiFi.disconnect();  
-  WiFi.mode(WIFI_OFF); 
-  WiFi.mode(WIFI_AP);
-      
-  WiFi.begin(ssid,password);
-  
-  int counter = 0;
-  while(WiFi.status() != WL_CONNECTED) {
-    counter++;
-    if (counter >= WIFI_TIMEOUT*2) {
-      Serial.println("\nConnection failed, starting access point\n");
 
-      //Start access point
-      WiFi.disconnect();  
-      WiFi.mode(WIFI_OFF); 
-      WiFi.mode(WIFI_AP);
-      char name[nameString.length()];
-      stringToChar(nameString, name);
-      IPAddress apIP(192, 168, 4, 1);
-      WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-      WiFi.softAP(name);
-      dnsServer.start(53, "*", apIP);
-      break;
+  if (ssidLength == 0) Serial.println("SSID not configured, not connecting to WiFi");
+  else {
+    Serial.print("Attempting to connect to \"" + (String)ssid + "\". Please wait");
+    WiFi.disconnect();  
+    WiFi.mode(WIFI_OFF); 
+    WiFi.mode(WIFI_AP);
+    WiFi.begin(ssid,password);
+
+    int counter = 0;
+    while(WiFi.status() != WL_CONNECTED) {
+      counter++;
+      if (counter >= WIFI_TIMEOUT*2) {
+        Serial.println("Connection failed");
+        break;
+      }
+      delay(500);
+      Serial.print(".");
     }
-    delay(500);
-    Serial.print(".");
   }
-
+ 
   if (WiFi.status() == WL_CONNECTED) {
     String ipAddress = WiFi.localIP().toString().c_str();
-    Serial.println("\nWiFi connected with IP address: " + ipAddress + ", using device name: " + nameString);
+    Serial.println("WiFi connected with IP address: " + ipAddress + ", using device name: " + nameString);
     configureDNS(nameString);
   }
   else {
+    Serial.println("Starting access point");
+    //Start access point
+    WiFi.disconnect();  
+    WiFi.mode(WIFI_OFF); 
+    WiFi.mode(WIFI_AP);
+    char name[nameString.length()];
+    stringToChar(nameString, name);
+    IPAddress apIP(192, 168, 4, 1);
+    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP(name);
+    dnsServer.start(53, "*", apIP);
     IPAddress IP = WiFi.softAPIP();
     String ipAddress = IP.toString().c_str();
-    Serial.println("\nStarted WiFi access point on IP address: " + ipAddress + ", using device name: " + nameString);
+    Serial.println("Started WiFi access point on IP address: " + ipAddress + ", using device name: " + nameString);
   }
 
   //Start websocket server
@@ -377,7 +405,7 @@ void configureDNS(String name) {
     }
   }
 
-  int16_t battLedDuty = 0;
+  float battLedDuty = 0;
   bool battLedDir = 1;
   
   /**
@@ -392,17 +420,17 @@ void configureDNS(String name) {
       else if (batteryState == BATT_CHARGING) { //charging
 
         //digitalWrite(LEDL_R,HIGH);
-        ledcWrite(LEDL_R_CH, battLedDuty);
+        ledcWrite(LEDL_R_CH, (int16_t)battLedDuty);
    
-        if (battLedDir) battLedDuty += LED_STEPSIZE;
-        else battLedDuty -= LED_STEPSIZE;
+        if (battLedDir) battLedDuty += CHARGING_LED_STEPSIZE;
+        else battLedDuty -= CHARGING_LED_STEPSIZE;
         
         if (battLedDuty >= LEDL_R_INTENSITY) {
           battLedDuty = LEDL_R_INTENSITY;
           battLedDir = 0;
         }
-        else if (battLedDuty < 0) {
-          battLedDuty = 0;
+        else if (battLedDuty < CHARGING_LED_MIN) {
+          battLedDuty = CHARGING_LED_MIN;
           battLedDir = 1;
         }
 
@@ -429,6 +457,6 @@ void configureDNS(String name) {
   }
 #endif
 
-char* stringToChar(String in, char* out) {
+void stringToChar(String in, char* out) {
   in.toCharArray(out,in.length()+1);
 }

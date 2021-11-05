@@ -4,37 +4,15 @@ void initialization() {
   Serial.begin(250000);
   delay(100);
   Serial.println("\n-----------------------------------------------------------------------------\nStarting initialization\n");
-
-  SPIFFS.begin(); 
-  
-  IRsensor.initialize();
-
-  //Start and setup EEPROM
-  EEPROM.begin(512);
-  startupEeprom();
- 
-  //Disable bluetooth radio
-  btStop();
-
-  //Start WiFi
-  if (ssidString.length() == 0) Serial.println("SSID not configured, not connecting to WiFi");
-  
-  char ssid[ssidString.length()];
-  stringToChar(ssidString, ssid);
-  char password[passwordString.length()];
-  stringToChar(passwordString, password);
-  connectWifi(ssid, password, ssidString.length(), passwordString.length());
-  
-  initializeEepromIRsensor();
   
   #if defined(HW_DIY_BASIC) 
 
   #elif defined(HW_DIY_FULL)
     //Configure LED channels
-    ledcSetup(LEDL_R_CH, 5000, 8);
-    ledcSetup(LEDL_G_CH, 5000, 8);
-    ledcSetup(LEDR_R_CH, 5000, 8);
-    ledcSetup(LEDR_G_CH, 5000, 8);
+    ledcSetup(LEDL_R_CH, 5000, 12);
+    ledcSetup(LEDL_G_CH, 5000, 12);
+    ledcSetup(LEDR_R_CH, 5000, 12);
+    ledcSetup(LEDR_G_CH, 5000, 12);
     ledcAttachPin(LEDL_R, LEDL_R_CH);
     ledcAttachPin(LEDL_G, LEDL_G_CH);
     ledcAttachPin(LEDR_R, LEDR_R_CH);
@@ -50,6 +28,7 @@ void initialization() {
     tp.DotStar_SetPower(false);
 
     setRightLED(false);
+    
   #elif defined(HW_BETA)
     pinMode(EXPOSURE,INPUT);
     
@@ -92,9 +71,30 @@ void initialization() {
     setRightLED(false);
   #endif
 
+  SPIFFS.begin(); 
+  
+  IRsensor.initialize();
+
+  //Start and setup EEPROM
+  EEPROM.begin(512);
+  startupEeprom();
+  initializeEepromIRsensor();
+ 
+  //Disable bluetooth radio
+  btStop();
+
+  //Start WiFi
+  char ssid[ssidString.length()];
+  stringToChar(ssidString, ssid);
+  char password[passwordString.length()];
+  stringToChar(passwordString, password);
+  connectWifi(ssid, password, ssidString.length(), passwordString.length());
+  
+  
+
   webServer.onNotFound([]() {                              // If the client requests any URI
     if (!handleFileRead(webServer.uri()))                  // send it if it exists
-     webServer.send(404, "text/plain", "404: Not Found"); // otherwise, respond with a 404 (Not Found) error
+     webServer.send(404, "text/html", getEmptyIndex()); // otherwise, respond with a 404 (Not Found) error
   });
 
   webServer.begin();

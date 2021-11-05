@@ -1,5 +1,5 @@
 #define TX_PIN 25
-#define RX_PIN 26
+#define RX_PIN 22
 
 #include <IRSend.h>
 #include <IRRecv.h>

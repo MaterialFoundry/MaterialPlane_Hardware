@@ -83,7 +83,6 @@ String readFile(fs::FS &fs, const char * path){
     if(debug) Serial.println("- empty file or failed to open file");
     if (path == "/") {
       file.close();
-      return getEmptyIndex();
     }
     else {
       file.close();
@@ -123,5 +122,17 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
 }
 
 String getEmptyIndex() {
-  String message = "Could not find the requested page, please make sure you have uploaded the latest webserver files";
+
+return "<html>\
+  <head>\
+    <title>Material Sensor</title>\
+    <style>\
+      body { background-color: #000000; font-family: Arial, Helvetica, Sans-Serif; Color: #ffffff; }\
+    </style>\
+  </head>\
+  <body>\
+    <h1>Page not found</h1>\
+    <p>Could not find the requested page, please make sure you have uploaded the latest webserver files.<br>Instructions can be found in the <a href=\"https://github.com/CDeenen/MaterialPlane/wiki/Sensor-Installation-Instructions\">wiki</a>.</p>\
+  </body>\
+</html>";
 }
