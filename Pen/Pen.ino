@@ -26,8 +26,8 @@ void setup() {
   pinMode(IR_LED_F, OUTPUT);
   pinMode(IR_LED_R, OUTPUT);
   pinMode(LED, OUTPUT);
-  pinMode(R_LED_F, OUTPUT);
-  pinMode(R_LED_R, OUTPUT);
+  //pinMode(R_LED_F, OUTPUT);
+  //pinMode(R_LED_R, OUTPUT);
 
   //Initialize switch pins as inputs
   pinMode(SW_R, INPUT_PULLUP);
@@ -132,8 +132,8 @@ uint8_t readSwitches() {
 
   
   //Switch on or off F and R red LEDs
-  digitalWrite(R_LED_R, !digitalRead(SW_LR));
-  digitalWrite(R_LED_F, !digitalRead(SW_R) || !digitalRead(SW_LF));
+  //digitalWrite(R_LED_R, !digitalRead(SW_LR));
+  //digitalWrite(R_LED_F, !digitalRead(SW_R) || !digitalRead(SW_LF));
   
   //Switch on rear LED if rear switch is pressed
   digitalWrite(IR_LED_R, !digitalRead(SW_LR));

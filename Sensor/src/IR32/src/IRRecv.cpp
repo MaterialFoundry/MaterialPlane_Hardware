@@ -1,7 +1,7 @@
 #include "IRRecv.h"
 #include <algorithm>
 
-#define RMT_RX_BUF_SIZE 1000
+#define RMT_RX_BUF_SIZE 2000
 #define RMT_RX_BUF_WAIT 10
 #define RMT_ITEM_DURATION(d)  ((d & 0x7fff)*10/RMT_TICK_10_US)  /*!< Parse duration time from memory register value */
 #define RMT_FILTER_THRESH 100 // ticks
@@ -30,7 +30,6 @@ bool IRRecv::start(gpio_num_t rx_pin)
     rmt_rx.rx_config.filter_ticks_thresh = RMT_FILTER_THRESH;
     rmt_rx.rx_config.idle_threshold = RMT_IDLE_TIMEOUT;
 
-    //periph_module_reset(PERIPH_RMT_MODULE); //reset module to clear buffer
     if (rmt_config(&rmt_rx) != ESP_OK) return false;
     if (rmt_driver_install(_channel, RMT_RX_BUF_SIZE, 0) != ESP_OK) return false;
     _rb = NULL;
@@ -47,16 +46,14 @@ int8_t IRRecv::available()
 {
    if (!_active) return -1;
    UBaseType_t waiting;
-    #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4,0,0) // versions 4+ added an extra arg to vRingbufferGetInfo
-    vRingbufferGetInfo(_rb, NULL, NULL, NULL, NULL, &waiting);
-    #else
-    vRingbufferGetInfo(_rb, NULL, NULL, NULL, &waiting);
-    #endif
-    return waiting;
+   vRingbufferGetInfo(_rb, NULL, NULL, NULL, &waiting);
+   return waiting;
 } 
 
 bool IRRecv::rx_check_in_range(int duration_ticks, int target_us)
 {
+    //Serial.println("range: " + (String)(target_us) + '\t' + (String)(_margin_us) + '\t' + (String)RMT_ITEM_DURATION(duration_ticks));
+    
     if(( RMT_ITEM_DURATION(duration_ticks) < (target_us + _margin_us))
         && ( RMT_ITEM_DURATION(duration_ticks) > (target_us - _margin_us))) {
         return true;
@@ -96,7 +93,7 @@ uint32_t IRRecv::rx_parse_items(rmt_item32_t* item, int item_num, uint8_t timing
 {
     int w_len = item_num;
     if(w_len < timing_groups[timing].bit_length + 2) {
-        log_v("Item length was only %d bit", w_len);
+        log_w("Item length was only %d bit", w_len);
         return 0;
     }
     if(!rx_header_if(item++, timing)) {
@@ -120,12 +117,11 @@ uint32_t IRRecv::rx_parse_items(rmt_item32_t* item, int item_num, uint8_t timing
 void dump_item(rmt_item32_t* item, size_t sz)
 {
   for (int x=0; x<sz; x++) {
-    // print item times in microseconds so its easy to use this to build a new timing entry.
-    log_i("Count: %d  duration0: %dus  duration1: %dus", x,RMT_ITEM_DURATION(item[x].duration0),RMT_ITEM_DURATION(item[x].duration1));
+    log_v("Count: %d  duration0: %d  duration1: %d\n", x,item[x].duration0,item[x].duration1);
     if(item[x].duration1==0 || item[x].duration0 == 0 || item[x].duration1 > 0x7f00 || item[x].duration0 > 0x7f00) break;
   }
 }
-
+ 
 uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
 {
     if (!available()) return 0;
@@ -133,19 +129,21 @@ uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
     size_t rx_size = 0;
     rmt_item32_t* item = (rmt_item32_t*) xRingbufferReceive(_rb, &rx_size, RMT_RX_BUF_WAIT);
     if (!item) return 0;
+    //after parsing the data, clear space in the ringbuffer.
+    vRingbufferReturnItem(_rb, (void*) item);
+
+    //dump_item(item,rx_size); 
     uint32_t rx_data;
     uint8_t found_timing = 0;
     for (uint8_t timing : _preferred) {
         rx_data = rx_parse_items(item, rx_size / 4, timing);
+        
         if (rx_data) {
             found_timing = timing;
             break;
         }
     }
-    // if we did not parse the item from the prefered list then
-    // check the non-prefered items as well, but only if
-    // preferredOnly is not set.
-    if (!rx_data && !preferredOnly) {
+    if (!rx_data) {
         uint8_t groupCount = sizeof(timing_groups)/sizeof(timing_groups[0]);
         for (uint8_t timing = 0; timing < groupCount; timing++) {
             if (!inPrefVector(timing)) {
@@ -159,20 +157,11 @@ uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
     }
     if (found_timing) {
         timingGroup = (char*) timing_groups[found_timing].tag;
-    } else {
-        log_w("read() item with length %u not parsed!", rx_size / 4);
-        if (_dump_unknown) {
-            dump_item(item,rx_size); 
-        }
     }
-    //after parsing the data, clear space in the ringbuffer.
-    vRingbufferReturnItem(_rb, (void*) item);
     return rx_data;
 }    
 
 void IRRecv::setMargin(uint16_t margin_us) {_margin_us = margin_us;}
-
-void IRRecv::setDumpUnknown(bool dump) {_dump_unknown = dump;}
 
 uint8_t timingGroupElement(const char* tag)
 {
@@ -213,6 +202,7 @@ void IRRecv::stop()
     _rx_pin = GPIO_NUM_MAX;
     _timing = {};
     _active = false;
+    vRingbufferDelete(_rb);
 }
 
 bool IRRecv::active() {return _active;}    

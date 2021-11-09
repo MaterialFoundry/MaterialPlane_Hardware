@@ -1,6 +1,11 @@
 # Changelog Material Plane Sensor Firmware
+### v2.1.2 - 09-11-2021
+Fixes:
+<ul>
+    <li>Messed up something in the last update that greatly reduced the sensitivity of the ID sensor, this should be fixed now</li>
+</ul>
 
-### v2.1.1 - 03-11-2021
+### v2.1.1 - 05-11-2021
 Fixes:
 <ul>
     <li>Fixed a problem with the IR32 library that resulted in compilation errors</li>

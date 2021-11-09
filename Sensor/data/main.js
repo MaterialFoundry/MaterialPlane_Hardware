@@ -162,7 +162,7 @@ function sendWS(txt){
  * @param {String} msg Received data
  */
 function analyzeMessage(msg) {
-    //console.log("wsMessage",msg);
+    console.log("wsMessage",msg);
     let data = JSON.parse(msg);
     //console.log('data',data)
 

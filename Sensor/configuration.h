@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION        "2.1.1"
+#define FIRMWARE_VERSION        "2.1.2"
 
 #define DEVICE_NAME             "materialsensor"
 
