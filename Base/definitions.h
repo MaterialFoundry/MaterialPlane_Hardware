@@ -2,6 +2,8 @@
  * Definitions
  ********************************************************************/
 
+#define FIRMWARE_VERSION        "1.0.0"
+
 #define DEBUG false
 
 /*
@@ -52,3 +54,14 @@
  * Misc
  */
 #define TILT_THRESHOLD 15*TILT_ANGLE
+
+/**
+ * Force compilation error if board or clock is set incorrectly
+ */
+#ifndef __AVR_ATtiny416__
+#error This firmware was written for the ATtiny416. Please select it from the Tools > Board menu.
+#endif
+
+#if (F_CPU!=5000000UL)
+#error Wrong clock frequency selected. Please set it to "5 MHz Internal" in Tools > Clock
+#endif
