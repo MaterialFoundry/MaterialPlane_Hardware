@@ -2,7 +2,7 @@
  * Definitions
  ********************************************************************/
 
-#define FIRMWARE_VERSION        "1.0.0"
+#define FIRMWARE_VERSION        "1.0.1"
 
 /*
  * Switch Bitmasks
@@ -17,20 +17,16 @@
 /*
  * Pin Definitions
  */
-#define LED       PIN_PC0 //PA5
+#define LED       PIN_PC0
 #define IR_LED_F  PIN_PA5
 #define IR_LED_R  PIN_PA4
-#define R_LED_F   PIN_PB4
-#define R_LED_R   PIN_PC3
 
 #define SW_R      PIN_PB2
 #define SW_LF     PIN_PA6
 #define SW_LR     PIN_PB5 
 
-//SPI pins
-#define CS      PIN_PC1
-#define DATA    PIN_PA1
-#define SCK     PIN_PA3
+//SPI CS pin
+#define CS        PIN_PC1
 
 //Interrupt pins
 #define INT_IN PIN2_bm

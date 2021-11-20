@@ -2,15 +2,16 @@
  * Definitions
  ********************************************************************/
 
-#define FIRMWARE_VERSION        "1.0.0"
+#define FIRMWARE_VERSION        "1.1.0"
 
-#define DEBUG false
+//#define DEBUG
 
 /*
  * CMD
  * Sets the command to be sent
  */
 #define CMD 1
+#define CMD_CAL 3
 
 /*
  * PWM settings
@@ -38,22 +39,21 @@
  * Pin Definitions
  */
 
-//SPI pins
+//SPI CS pin
 #define CS      PIN_PC1
-#define DATA    PIN_PA1
-#define SCK     PIN_PA3
 
 //Interrupt pins
 #define INT_IN PIN2_bm
 
 //LED pins
-#define LED       PIN_PC0 //PA5
+#define LED       PIN_PC0
 #define IR_LED    PIN_PA5
 
 /*
  * Misc
  */
 #define TILT_THRESHOLD 15*TILT_ANGLE
+#define CAL_LED_PERIOD  500
 
 /**
  * Force compilation error if board or clock is set incorrectly
