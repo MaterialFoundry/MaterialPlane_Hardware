@@ -1,4 +1,43 @@
 # Changelog Material Plane Sensor Firmware
+### Firmware v2.1.3 - 26-01-2021
+Fixes:
+<ul>
+    <li>Sensor would not connect to wifi if the password was of specific lengths (16 characters did not work, possibly other lengths as well). This has been fixed</li>
+    <li>Fixed some minor instability issues</li>
+</ul>
+
+Additions:
+<ul>
+    <li>Multi-point and offset calibration are again implemented. Check the wiki for more info on how to use this: https://github.com/CDeenen/MaterialPlane/wiki/Beta-Hardware-Guide#sensor-calibration</li>
+    <li>Auto exposure now works for diy HW</li>
+    <li>Added option to invert the LEDs for the full DIY HW (required if using common anode LEDs)</li>
+</ul>
+
+Other:
+<ul>
+    <li>FreeRTOS is now used to allow parallel processing. This should result in improved performance and stability</li>
+    <li>Big code cleanup and restructuring</li>
+</ul>
+
+### Webserver v1.0.1 - 26-01-2021
+Fixes:
+<ul>
+    <li>The 'Coordinates' window would not always display the correct coordinates</li>
+    <li>Fixed some typos</li>
+</ul>
+
+Additions:
+<ul>
+    <li>Added a confirmation dialog for the 'Reset' button, so the user doesn't accidentally reset all sensor settings</li>
+</ul>
+
+Other:
+<ul>
+    <li>When the websocket connection has been established, the Material Foundry logo has been removed, since it can take up quite a lot of real estate on a display</li>
+    <li>When the webserver loses the websocket connection, it now indicates this by displaying a 'reconnecting' screen</li>
+    <li>Removed the 'Area Filter' section, since this is not used</li>
+</ul>
+
 ### v2.1.2 - 09-11-2021
 Fixes:
 <ul>

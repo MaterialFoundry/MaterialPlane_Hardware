@@ -139,7 +139,6 @@ table, th, td {
 canvas {
     border: 2px solid rgb(151, 149, 149);
     margin: auto;
-    padding: 10px 50px;
 }
 
 .notes {

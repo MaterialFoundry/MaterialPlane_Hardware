@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION        "2.1.2"
+#define FIRMWARE_VERSION        "2.1.3"
 
 #define DEVICE_NAME             "materialsensor"
 
@@ -108,3 +108,19 @@
 #define CHARGING_LED_MIN        1
 #define CHARGING_LED_FREQ       2.5
 #define CHARGING_LED_STEPSIZE   0.001*(LEDL_R_INTENSITY-CHARGING_LED_MIN)/(0.001*CHARGING_LED_TIMER*CHARGING_LED_FREQ)
+
+#define CALIBRATION_CANCEL  4
+#define CALIBRATION_NEXT    3
+#define CALIBRATION_ACTIVE  2
+#define CALIBRATION_STARTING  1
+#define CALIBRATION_INACTIVE  0
+
+#define CALIBRATION_SINGLE  0
+#define CALIBRATION_OFFSET  1
+#define CALIBRATION_MULTI   2
+
+#define EXP_STOPPED           0
+#define EXP_PRESTART          1
+#define EXP_START             2
+#define EXP_SETEXP            3
+#define EXP_SETMINBRIGHTNESS  4

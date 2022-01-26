@@ -3,7 +3,7 @@ void initialization() {
   //Start the serial port
   Serial.begin(250000);
   delay(100);
-  Serial.println("\n-----------------------------------------------------------------------------\nStarting initialization\n");
+  Serial.println("\n-----------------------------------------------------------------------------\nStarting initialization");
   
   #if defined(HW_DIY_BASIC) 
 
@@ -18,6 +18,13 @@ void initialization() {
     ledcAttachPin(LEDR_R, LEDR_R_CH);
     ledcAttachPin(LEDR_G, LEDR_G_CH);
 
+    #if defined(INVERT_LEDS)
+      GPIO.func_out_sel_cfg[LEDL_R].inv_sel = 1;
+      GPIO.func_out_sel_cfg[LEDL_G].inv_sel = 1;
+      GPIO.func_out_sel_cfg[LEDR_R].inv_sel = 1;
+      GPIO.func_out_sel_cfg[LEDR_G].inv_sel = 1;
+    #endif
+    
     //Switch LEDs off
     ledcWrite(LEDL_R_CH, 0);
     ledcWrite(LEDL_G_CH, 0);
@@ -72,32 +79,69 @@ void initialization() {
   #endif
 
   SPIFFS.begin(); 
-  
-  IRsensor.initialize();
-
+ 
   //Start and setup EEPROM
   EEPROM.begin(512);
   startupEeprom();
-  initializeEepromIRsensor();
+  
  
   //Disable bluetooth radio
   btStop();
 
   //Start WiFi
-  char ssid[ssidString.length()];
+  char ssid[ssidString.length()+1];
   stringToChar(ssidString, ssid);
-  char password[passwordString.length()];
+  char password[passwordString.length()+1];
   stringToChar(passwordString, password);
   connectWifi(ssid, password, ssidString.length(), passwordString.length());
   
-  
-
   webServer.onNotFound([]() {                              // If the client requests any URI
     if (!handleFileRead(webServer.uri()))                  // send it if it exists
      webServer.send(404, "text/html", getEmptyIndex()); // otherwise, respond with a 404 (Not Found) error
   });
 
   webServer.begin();
+/*
+  xTaskCreatePinnedToCore(  
+    irSensorLoop,    //function
+    "irSensorTask",  //name
+    5000,       //stack size
+    NULL,       //parameter to pass
+    1,          //task priority
+    &irSensorTask,        //task handle
+    1           //task core
+  );
+  */
+  xTaskCreatePinnedToCore(  
+    pingLoop,    //function
+    "pingTask",  //name
+    3000,       //stack size
+    NULL,       //parameter to pass
+    1,          //task priority
+    &pingTask,        //task handle
+    1           //task core
+  );
+  xTaskCreatePinnedToCore(  
+    core0Loop,    //function
+    "core0Task",  //name
+    5000,       //stack size
+    NULL,       //parameter to pass
+    1,          //task priority
+    &core0Task,        //task handle
+    0           //task core
+  );
+ /* xTaskCreatePinnedToCore(  
+    comLoop,    //function
+    "comTask",  //name
+    6000,       //stack size
+    NULL,       //parameter to pass
+    2,          //task priority
+    &comTask,        //task handle
+    0           //task core
+  );*/
+
+  IRsensor.initialize();
+  initializeEepromIRsensor();
   
   printStatus();
   

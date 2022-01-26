@@ -8,7 +8,7 @@ let networkSettings = {};
 let fwVersion;
 let hwVersion;
 
-const webserverVersion = "v1.0.0";
+const webserverVersion = "v1.0.1";
 
 startWebsocket();
 
@@ -34,7 +34,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     
     document.getElementById("debugEn").addEventListener("change", (event) =>            { sendWS(`SET DEBUG ${event.target.checked ? "TRUE" : "FALSE"} \n`) });
     document.getElementById("serialOut").addEventListener("change", (event) =>          { sendWS(`SET SERIALOUT ${event.target.checked ? "TRUE" : "FALSE"} \n`) });
-    document.getElementById("resetSettings").addEventListener("click", (event) =>       { sendWS(`SET DEFAULT \n`) });
+    document.getElementById("resetSettings").addEventListener("click", (event) =>       { 
+        if (confirm(`Are you sure you want to reset all settings to their default values? This is irreversable, and will require you to reconfigure everything, including the WiFi settings.`))
+            sendWS(`SET DEFAULT \n`) 
+    });
     document.getElementById("restart").addEventListener("click", (event) =>             { sendWS(`RESTART \n`) });
 
     document.getElementById("updateDeviceName").addEventListener("click", (event) =>    { sendWS(`SET WIFI NAME "${document.getElementById("deviceName").value}" \n`) });
@@ -66,6 +69,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     document.getElementById("xOffsetNumber").addEventListener("change", (event) =>      { sendWS(`SET CAL OFFSETX ${event.target.value} \n`) });
     document.getElementById("yOffset").addEventListener("change", (event) =>            { sendWS(`SET CAL OFFSETY ${event.target.value} \n`) });
     document.getElementById("yOffsetNumber").addEventListener("change", (event) =>      { sendWS(`SET CAL OFFSETY ${event.target.value} \n`) });
+    document.getElementById("xScale").addEventListener("change", (event) =>             { sendWS(`SET CAL SCALEX ${event.target.value} \n`) });
+    document.getElementById("xScaleNumber").addEventListener("change", (event) =>       { sendWS(`SET CAL SCALEX ${event.target.value} \n`) });
+    document.getElementById("yScale").addEventListener("change", (event) =>             { sendWS(`SET CAL SCALEY ${event.target.value} \n`) });
+    document.getElementById("yScaleNumber").addEventListener("change", (event) =>       { sendWS(`SET CAL SCALEY ${event.target.value} \n`) });
     document.getElementById("calEn").addEventListener("change", (event) =>              { sendWS(`SET CAL CALIBRATION ${event.target.checked ? "TRUE" : "FALSE"} \n`) });
     document.getElementById("offsetEn").addEventListener("change", (event) =>           { sendWS(`SET CAL OFFSET ${event.target.checked ? "TRUE" : "FALSE"} \n`) });
     document.getElementById("calBtn").addEventListener("click", (event) => {
@@ -138,6 +145,12 @@ async function startWebsocket() {
  */
  function resetWS(){
     if (wsOpen) {
+        document.getElementById("waitMessage").style = "";
+        document.getElementById("mainBody").style = "display:none";
+        document.getElementById("waitMessageTxt").innerHTML = `
+            Lost connection with the sensor.<br>
+            Attempting to reestablish, please wait.`;
+
         wsOpen = false;
         console.log("Websocket disconnected");
         startWebsocket();
@@ -162,20 +175,19 @@ function sendWS(txt){
  * @param {String} msg Received data
  */
 function analyzeMessage(msg) {
-    console.log("wsMessage",msg);
+    //console.log("wsMessage",msg);
     let data = JSON.parse(msg);
     //console.log('data',data)
 
     if (data.status == "ping") {
+        document.getElementById("waitMessage").style = "display:none";
+        document.getElementById("mainBody").style = "";
         document.getElementById("chargingState").innerHTML = data.battery.charging == 1 ? "Charging" : "Not Charging";
         document.getElementById("usbConnected").innerHTML = data.battery.usbActive == 1 ? "Yes" : "No";
         document.getElementById("batteryVoltage").innerHTML = `${data.battery.voltage.toFixed(2)}V`;
         document.getElementById("batteryPercentage").innerHTML = `${data.battery.percentage}%`;
     }
     else if (data.status == "update") {
-        document.getElementById("waitMessage").style = "display:none";
-        document.getElementById("mainBody").style = "";
-
         generalSettings = data.sett;
         calSettings = data.cal;
         irSettings = data.ir;
@@ -201,7 +213,7 @@ function analyzeMessage(msg) {
         document.getElementById("wsMode").innerHTML = networkSettings.wsMode;
         document.getElementById("wsPort").value = networkSettings.wsPort;
         let clients = `${networkSettings.wsClients.length}`;
-        clients += networkSettings.wsClients.length == 1 ? `client<br>` : `clients<br>`;
+        clients += networkSettings.wsClients.length == 1 ? ` client<br>` : ` clients<br>`;
         for (let i=0; i<networkSettings.wsClients.length; i++)
             clients += `${i+1}: ${networkSettings.wsClients[i]}<br>`;
         document.getElementById("wsClients").innerHTML = clients;
@@ -225,6 +237,10 @@ function analyzeMessage(msg) {
         document.getElementById("xOffsetNumber").value = calSettings.offsetX;
         document.getElementById("yOffset").value = calSettings.offsetY;
         document.getElementById("yOffsetNumber").value = calSettings.offsetY;
+        document.getElementById("xScale").value = calSettings.scaleX;
+        document.getElementById("xScaleNumber").value = calSettings.scaleX;
+        document.getElementById("yScale").value = calSettings.scaleY;
+        document.getElementById("yScaleNumber").value = calSettings.scaleY;
         document.getElementById("calEn").checked = calSettings.calibrationEnable;
         document.getElementById("offsetEn").checked = calSettings.offsetEn;
     }
@@ -243,6 +259,7 @@ function analyzeMessage(msg) {
         const points = data.data;
         for (let i=0; i<4; i++) {
             const point = points[i];
+            if (point == undefined) continue;
             if (i == 0) {
                 document.getElementById("baseId").innerHTML=point.id;
                 document.getElementById("baseCmd").innerHTML=point.command;

@@ -46,6 +46,9 @@
   #define LEDL_G_INTENSITY  255
   #define LEDR_R_INTENSITY  50
   #define LEDR_G_INTENSITY  255
+
+  //Uncomment this to invert the LEDs
+  //#define INVERT_LEDS
   
   #define USB_ACTIVE 32
   

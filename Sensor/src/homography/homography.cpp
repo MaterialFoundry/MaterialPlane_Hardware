@@ -4,7 +4,7 @@
  */
 
 #include "Arduino.h"
-#include "MatrixMath.h"
+#include "../MatrixMath/MatrixMath.h"
 #include "math.h"
 #include "homography.h"
 
@@ -69,21 +69,21 @@ void homography::calculateHomographyMatrix() {
     _H[2][2] = 1;
 }
 
-void homography::calculateCoordinates(int x, int y){
+void homography::calculateCoordinates(double x, double y){
     mtx_type TP[3] = {x,y,1};
     mtx_type outputTemp[3];
     Matrix.Multiply((mtx_type*)TP, (mtx_type*)_H, 1, 3, 3, (mtx_type*)outputTemp);
     outputTemp[0] /= outputTemp[2];
     outputTemp[1] /= outputTemp[2];
-    _x = (uint16_t)outputTemp[0];
-    _y = (uint16_t)outputTemp[1];
+    _x = outputTemp[0];
+    _y = outputTemp[1];
 }
 
-uint16_t homography::getX(){
+double homography::getX(){
     return _x;
 }
 
-uint16_t homography::getY(){
+double homography::getY(){
     return _y;
 }
 

@@ -14,15 +14,18 @@
   </script>
 
   <div class="center">
-    <img src="banner.jpg" alt="Banner" style="width:600px">
-    <h1>Material Plane Sensor</h1>
- 
+    
     <div class="waitMessage" id="waitMessage">
-      Establishing websocket connection with the sensor.<br>
-      Please wait.
+      <img src="banner.jpg" alt="Banner" style="width:600px">
+      <h1>Material Plane Sensor</h1>
+      <div id="waitMessageTxt">
+        Establishing websocket connection with the sensor.<br>
+        Please wait.
+      </div>
     </div>
 
     <div id="mainBody" style="display:none">
+      <h1>Material Plane Sensor</h1>
      <!-- Tab links -->
     <div class="tab">
       <button class="tabButtons active" id="StatusBtn" onclick="openTab('Status')">Status</button>
@@ -76,7 +79,7 @@
 
       <hr>
       <div class="settingsBtn">
-        <label>Reset settings do default values:</label>
+        <label>Reset settings to default values:</label>
         <input type="button" id="resetSettings" value="Reset">
       </div>
       <div class="settingsBtn">
@@ -285,29 +288,13 @@
         </div>
       </div>
 
-      <h3 class="expandable PAJsensor"><img src="right.png" class="expandableIcon" style="width:20px">Area Filter</h3> 
-      <div class="collapsed">
-        <p class="notes">
-          The area of each point is the amount of pixels that are considered part of the point. Areas smaller than 'Minimum Area' or bigger than 'Maximum Area' are ignored.
-        </p>
-        <div class="settings">
-            <label>Minimum Area:</label>
-            <input type="range" min="0" max="255" value="127" class="slider" id="minArea">
-            <input type="text" id="minAreaNumber" value="127">
-        </div>
-        <div class="settings">
-            <label>Maximum Area:</label>
-            <input type="range" min="0" max="255" value="127" class="slider" id="maxArea">
-            <input type="text" id="maxAreaNumber" value="127">
-        </div>
-      </div>
-
       <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Transform</h3>  
       <div class="collapsed">
         <p class="notes">
             'Mirror X' and 'Mirror Y' will mirror the point's location in X and Y direction.<br>
             'Rotate' will rotate everything 90 degrees (X becomes Y and Y becomes X).<br>
-            'X Offset' and 'Y Offset' will shift the measured point by the set value to fix alignment issues
+            'X Offset' and 'Y Offset' will shift the measured point by the set value to fix alignment issues.<br>
+            'X Scale' and 'Y Scale' will scale the coordinate of the measured point from the center.
         </p>
         <div class="settings">
             <label>Mirror X:</label>
@@ -331,6 +318,16 @@
             <input type="range" min="-100" max="100" value="0" class="slider" id="yOffset">
             <input type="text" id="yOffsetNumber" value="0">
         </div>
+        <div class="settings">
+          <label>X Scale:</label>
+          <input type="range" min="0" max="2" value="1" step="0.01" class="slider" id="xScale">
+          <input type="text" id="xScaleNumber" value="1">
+      </div>
+      <div class="settings">
+          <label>Y Scale:</label>
+          <input type="range" min="0" max="2" value="1" step="0.01" class="slider" id="yScale">
+          <input type="text" id="yScaleNumber" value="1">
+      </div>
       </div>
 
       <hr>
@@ -347,7 +344,7 @@
             <input type="checkbox" id="calEn">
         </div>
         <div class="settings">
-            <label>Offset Enabled:</label>
+            <label>Calibration Offset Enabled:</label>
             <input type="checkbox" id="offsetEn">
         </div>
 

@@ -1,7 +1,7 @@
 #include "configuration.h"
 #include "userSettings.h"
 #include "src/WebSocketsServer/src/WebSocketsServer.h"
-#include "src/homography/homography.h"
+//#include "src/homography/homography.h"
 #include "esp32-hal-cpu.h"
 #include <esp_task_wdt.h>
 #include <WiFi.h>
@@ -16,11 +16,11 @@
 
 #if defined(HW_DIY_BASIC)
   #include "src/wiiCam/wiiCam.h"
-  wiiCam IRsensor;
+  wiiCam IRsensor(SDA,SCL);
 #elif defined(HW_DIY_FULL)
   #include "src/wiiCam/wiiCam.h"
   #include "src/TinyPICO_Helper_Library/src/TinyPICO.h"
-  wiiCam IRsensor;
+  wiiCam IRsensor(SDA,SCL);
   TinyPICO tp = TinyPICO();
 #elif defined(HW_BETA)
   #include "src/PAJ7025R3/PAJ7025R3.h"
@@ -31,33 +31,22 @@
 #endif
 
 #define WEBSOCKETS_NETWORK_TYPE NETWORK_ESP32 
-#define MSG_LENGTH 100*MAX_IR_POINTS
+#define MSG_LENGTH 150*MAX_IR_POINTS
 #define WS_MODE_OFF 0
 #define WS_MODE_SERVER 1
 #define WS_MODE_CLIENT 2
 
+bool debug = false;
+bool serialOutput = false;
 
 /**
  * IR Sensor variables
  */
-unsigned long IRtimer = 0;
-unsigned long IRtimeout = 0;
 volatile bool exposureDone = false;
-bool debug = false;
-bool serialOutput = false;
-uint8_t maxIRpoints = 16;
-bool calibration = false;
-bool offsetOn = false;
-bool mirrorX = false;
-bool mirrorY = false;
-bool rotation = false;
-int16_t offsetX = 0;
-int16_t offsetY = 0;
 bool calOpen = true;
 volatile uint8_t calibrationProcedure = 0;
+volatile uint8_t calibrationMode = 0;
 bool calibrationRunning = false;
-float framePeriod = 50;
-uint8_t averageCount = 10;
 
 /**
  * Websocket variables
@@ -67,7 +56,6 @@ uint16_t wsPort = WS_PORT_DEFAULT;
 String wsIP = "";
 bool wsConnected = false;
 uint8_t wsClients = 0;
-unsigned long pingTimer = 0;
 
 /**
  * ID sensor variables
@@ -103,12 +91,19 @@ uint16_t chargeSum = 0;
 bool usbActive = false;
 uint8_t usbCounter = 0;
 uint8_t batPercentage = 0;
+uint8_t autoExposureProcedure = EXP_STOPPED;
 
 
 ESP32WebServer webServer(80);
 DNSServer dnsServer;
 WebSocketsServer webSocketServer = WebSocketsServer(wsPort);
-homography cal;
+//homography cal;
+
+//Tasks
+TaskHandle_t irSensorTask;
+TaskHandle_t pingTask;
+TaskHandle_t core0Task;
+TaskHandle_t comTask;
 
 void IRAM_ATTR pajInterruptHandler(){
   exposureDone = true;
@@ -118,66 +113,37 @@ void setup() {
   initialization();
 }
 
-void loop() {
-    
+void core0Loop( void * parameter ) {
+ while(1) {
+  webServer.handleClient();
   if (WiFi.status() != WL_CONNECTED) {
     dnsServer.processNextRequest();
   }
+  delay(1);
+ }
+}
 
-  //checkWebServer();  
-  webServer.handleClient();
+/*void comLoop( void * parameter ) {
+  while(1) {
+    if (Serial.available() > 0) {
+      bool result = checkSerial(); 
+      if (result == true) if (debug) Serial.println("OK");
+      else if (result == false) if (debug) Serial.println("ERROR"); 
+    }
+    webSocketServer.loop();
+    delay(1);
+  }
+}*/
+
+void loop() {
+  readIR();
 
   if (Serial.available() > 0) {
-    bool result = checkSerial(); 
-    if (result == true) if (debug) Serial.println("OK");
-    else if (result == false) if (debug) Serial.println("ERROR"); 
-  }
-  
-  wsPing();
-  
-  webSocketServer.loop();
-
-  getCal();
-
-  #if defined(HW_BETA)
-
-    while(IDsensor.available()){
-      char* rcvGroup;
-      uint32_t result = IDsensor.read(rcvGroup);
-      if (rcvGroup == "MP" && result) {
-          irMode = result&255;
-          irAddress = result>>8;
-          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
-      }
-      else if (result) {
-        sendIRcode(rcvGroup, result);
-      }
+      bool result = checkSerial(); 
+      if (result == true) if (debug) Serial.println("OK");
+      else if (result == false) if (debug) Serial.println("ERROR"); 
     }
-    
-    if (exposureDone) {
-      exposureDone = false;
-      IRtimer = millis();
-      readIR();
-      autoExpose();
-    }
-    
-    if (millis()-IRtimeout >= 10) {
-      bool productId = IRsensor.checkProductId();
-      //Serial.println("ProductID: " + (String)IRsensor.checkProductId());
-      if (productId == false) {
-        if(debug) Serial.println("Sensor reset");
-        IRsensor.initialize();
-        initializeEepromIRsensor();
-      }
-      IRtimeout = millis();
-    }
-    
-  #else
-    if (millis() - IRtimer > framePeriod) {
-      IRtimer = millis();
-      readIR();
-    }
-  #endif
+    webSocketServer.loop();
 
   #if defined(HW_DIY_FULL) 
     if (millis()-ledTimer >= 2){
@@ -192,6 +158,19 @@ void loop() {
       setLeftLED(chargeState);
     }
   #elif defined(HW_BETA)
+    while(IDsensor.available()){
+      char* rcvGroup;
+      uint32_t result = IDsensor.read(rcvGroup);
+      if (rcvGroup == "MP" && result) {
+          irMode = result&255;
+          irAddress = result>>8;
+          if (debug) Serial.println("IR ID sensor. Address: " + (String)irAddress + "\tMode: " + (String)irMode);
+      }
+      else if (result) {
+        sendIRcode(rcvGroup, result);
+      }
+    }
+  
     if (millis()-ledTimer >= 100){
       ledTimer = millis();
       batteryCounter++;
@@ -309,98 +288,16 @@ uint8_t getBatteryPercentage(float v) {
   return percentage;
 }
 
-void connectWifi(const char* ssid, const char* password, uint8_t ssidLength, uint8_t passwordLength) {
-  Serial.println("\nStarting network configuration");
-  ssidString = "";
-  for (int i=0; i<ssidLength; i++) ssidString += ssid[i];
-  
-  if (WiFi.isConnected()) {
-    Serial.println("Disconnecting from: \"" + (String)WiFi.SSID() + "\"");
-  }
-
-  if (ssidLength == 0) Serial.println("SSID not configured, not connecting to WiFi");
-  else {
-    Serial.print("Attempting to connect to \"" + (String)ssid + "\". Please wait");
-    WiFi.disconnect();  
-    WiFi.mode(WIFI_OFF); 
-    WiFi.mode(WIFI_AP);
-    WiFi.begin(ssid,password);
-
-    int counter = 0;
-    while(WiFi.status() != WL_CONNECTED) {
-      counter++;
-      if (counter >= WIFI_TIMEOUT*2) {
-        Serial.println("Connection failed");
-        break;
-      }
-      delay(500);
-      Serial.print(".");
-    }
-  }
- 
-  if (WiFi.status() == WL_CONNECTED) {
-    String ipAddress = WiFi.localIP().toString().c_str();
-    Serial.println("WiFi connected with IP address: " + ipAddress + ", using device name: " + nameString);
-    configureDNS(nameString);
-  }
-  else {
-    Serial.println("Starting access point");
-    //Start access point
-    WiFi.disconnect();  
-    WiFi.mode(WIFI_OFF); 
-    WiFi.mode(WIFI_AP);
-    char name[nameString.length()];
-    stringToChar(nameString, name);
-    IPAddress apIP(192, 168, 4, 1);
-    WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-    WiFi.softAP(name);
-    dnsServer.start(53, "*", apIP);
-    IPAddress IP = WiFi.softAPIP();
-    String ipAddress = IP.toString().c_str();
-    Serial.println("Started WiFi access point on IP address: " + ipAddress + ", using device name: " + nameString);
-  }
-
-  //Start websocket server
-  wsMode = WS_MODE_SERVER;  //for now, force server mode
-  if (wsMode == WS_MODE_SERVER) {
-    webSocketServer.begin();
-    Serial.println("Websocket server started on port: " + (String)wsPort + "\n");
-  }
-  
-  //Connect to websocket server
-  else if (wsMode == WS_MODE_CLIENT) {
-    
-  }
-  
-  webSocketServer.onEvent(webSocketServerEvent);
-}
-
-void configureDNS(String name) {
-  char hostName[name.length()];
-  name.toCharArray(hostName,name.length()+1);
-
-  if (!MDNS.begin(hostName)) {
-      Serial.println("Error setting up MDNS responder!");
-      while(1){
-          delay(1000);
-      }
-  }
-}
-
 #if defined(HW_DIY_FULL) || defined(HW_BETA)
   /**
    * Set the right led, depending on whether there are any active connections
    */
   void setRightLED(bool connections){
     if (connections) {
-      //digitalWrite(LEDR_R,LOW);
-      //digitalWrite(LEDR_G,HIGH);
       ledcWrite(LEDR_R_CH, 0);
       ledcWrite(LEDR_G_CH, LEDR_G_INTENSITY);
     }
     else {
-      //digitalWrite(LEDR_R,HIGH);
-      //digitalWrite(LEDR_G,LOW);
       ledcWrite(LEDR_R_CH, LEDR_R_INTENSITY);
       ledcWrite(LEDR_G_CH, 0);
     }

@@ -1,3 +1,5 @@
+bool initialSend = true;
+
 void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:
@@ -7,7 +9,11 @@ void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
         {
             IPAddress ip = webSocketServer.remoteIP(num);
             if (debug) Serial.printf("[%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1], ip[2], ip[3]);
-            updateSetting();
+            if (initialSend) {
+              delay(100);
+              initialSend = false;
+            }
+            updateSettings();
         }
         break;
     case WStype_TEXT:
@@ -36,20 +42,4 @@ void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
     case WStype_FRAGMENT_FIN:
       break;
     }
-}
-
-/*
- * Ping Foundry to make sure ws connection is alive
- */
-void wsPing() {
-  if (millis()-pingTimer > PING_PERIOD) {
-    pingTimer = millis();
-    String msg = "{\"status\":\"ping\",\"source\":\"";
-    if (calibrationProcedure == CALIBRATION_INACTIVE) msg += "mainLoop";
-    else msg += "calibration";
-
-    msg += "\",\"battery\":{\"voltage\":" + (String)vBat + ",\"percentage\":" + (String)batPercentage + ",\"charging\":" + (String)chargeState + ",\"usbActive\":" + (String)usbActive + "}}";
-    webSocketServer.broadcastTXT(msg);
-    if (serialOutput) Serial.println(msg);
-  }
 }

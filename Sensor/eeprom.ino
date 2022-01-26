@@ -31,6 +31,8 @@
 #define OFFSET_ADDR         422   //8 * uint16_t = 16 bytes
 #define CAL_OFFSET_X_ADDR   438   //2 bytes
 #define CAL_OFFSET_Y_ADDR   440   //2 bytes
+#define CAL_SCALE_X_ADDR    442   //4 bytes
+#define CAL_SCALE_Y_ADDR    446   //4 bytes
 
 void startupEeprom(){
   if (EEPROM.read(FIRST_BOOT_ADDR) != 1) firstBoot();
@@ -45,32 +47,28 @@ void startupEeprom(){
   wsMode = getEepromWsMode();
   debug = getEepromDebug();
   serialOutput = getEepromSerialOutput();
-  calibration = getEepromCalCalibration();
-  offsetOn = getEepromCalOffset();
-  mirrorX = getEepromCalMirrorX();
-  mirrorY = getEepromCalMirrorY();
-  rotation = getEepromCalRotation();
-  offsetX = getEepromCalOffsetX();
-  offsetY = getEepromCalOffsetY();
-  averageCount = getEepromAvg();
-  readCal();
-  cal.calculateHomographyMatrix();
 }
 
 void initializeEepromIRsensor(){
+  IRsensor.setAverageCount(getEepromAvg());
+  IRsensor.setMirrorX(getEepromCalMirrorX());
+  IRsensor.setMirrorY(getEepromCalMirrorY());
+  IRsensor.setRotation(getEepromCalRotation());
+  IRsensor.setOffset(getEepromCalOffsetX(), getEepromCalOffsetY());
+  IRsensor.setScale(getEepromCalScaleX(), getEepromCalScaleY());
   IRsensor.setGain(getEepromIrGain());
   IRsensor.setPixelBrightnessThreshold(getEepromIrBrightness());
+  IRsensor.setCalibrationEnable(getEepromCalCalibration());
+  IRsensor.setCalibrationOffsetEnable(getEepromCalOffset());
+  IRsensor.setFramePeriod(getEepromIrFramePeriod());
+  readCal();
+  readCalOffset();
   #if defined(HW_BETA)
-    IRsensor.setFramePeriod(getEepromIrFramePeriod());
     IRsensor.setExposureTime(getEepromIrExposure());
     IRsensor.setPixelNoiseTreshold(getEepromIrNoise());
     IRsensor.setMinAreaThreshold(getEepromMinArea());
     IRsensor.setMaxAreaThreshold(getEepromMaxArea());
     IRsensor.setObjectNumberSetting(getEepromIrPoints());
-    maxIRpoints = getEepromIrPoints();
-  #else
-    maxIRpoints = 4;
-    framePeriod = getEepromIrFramePeriod();
   #endif
 }
 
@@ -102,6 +100,8 @@ void firstBoot(){
   setEepromCalRotation(false);
   setEepromCalOffsetX(0);
   setEepromCalOffsetY(0);
+  setEepromCalScaleX(1);
+  setEepromCalScaleY(1);
   EEPROM.commit(); 
 }
 
@@ -117,13 +117,27 @@ void writeEeprom(uint16_t addr, uint16_t data){
 void storeCal(){
   for (int i=0; i<2; i++)
     for (int j=0; j<4; j++)
-      writeEeprom(CAL_ADDR+2*j+8*i, cal.getCalArray(j,i));
+      writeEeprom(CAL_ADDR+2*j+8*i, IRsensor.getCalibrationArray(j,i));
   EEPROM.commit();
 }
 void readCal(){
   for (int i=0; i<2; i++)
     for (int j=0; j<4; j++)
-      cal.setCalArray(j,i,readEeprom(CAL_ADDR+2*j+8*i));
+      IRsensor.setCalibrationArray(j,i,readEeprom(CAL_ADDR+2*j+8*i));
+  IRsensor.calculateHomographyMatrix();
+}
+
+void storeCalOffset(){
+  for (int i=0; i<2; i++)
+    for (int j=0; j<4; j++)
+      writeEeprom(OFFSET_ADDR+2*j+8*i, IRsensor.getCalibrationOffsetArray(j,i));
+  EEPROM.commit();
+}
+void readCalOffset(){
+  for (int i=0; i<2; i++)
+    for (int j=0; j<4; j++)
+      IRsensor.setCalibrationOffsetArray(j,i,readEeprom(OFFSET_ADDR+2*j+8*i));
+  IRsensor.calculateOffsetHomographyMatrix();
 }
 
 void setEepromDebug(bool en){
@@ -404,4 +418,56 @@ void setEepromCalOffsetY(int16_t offset) {
 
 int16_t getEepromCalOffsetY() {
   return (int16_t)readEeprom(CAL_OFFSET_Y_ADDR);
+}
+
+typedef union
+{
+  float value;
+  uint8_t bytes[4];
+} FLOATUNION_t;
+
+void setEepromCalScaleX(float scale){
+  FLOATUNION_t myFloat;
+  myFloat.value = scale;
+  EEPROM.write(CAL_SCALE_X_ADDR,myFloat.bytes[0]);
+  EEPROM.write(CAL_SCALE_X_ADDR+1,myFloat.bytes[1]);
+  EEPROM.write(CAL_SCALE_X_ADDR+2,myFloat.bytes[2]);
+  EEPROM.write(CAL_SCALE_X_ADDR+3,myFloat.bytes[3]);
+  EEPROM.commit();
+}
+
+float getEepromCalScaleX() {
+  FLOATUNION_t myFloat;
+  myFloat.bytes[0] = EEPROM.read(CAL_SCALE_X_ADDR);
+  myFloat.bytes[1] = EEPROM.read(CAL_SCALE_X_ADDR+1);
+  myFloat.bytes[2] = EEPROM.read(CAL_SCALE_X_ADDR+2);
+  myFloat.bytes[3] = EEPROM.read(CAL_SCALE_X_ADDR+3);
+  if (isnan(myFloat.value)) {
+    setEepromCalScaleX(1);
+    return 1;
+  }
+  else return myFloat.value;
+}
+
+void setEepromCalScaleY(float scale){
+  FLOATUNION_t myFloat;
+  myFloat.value = scale;
+  EEPROM.write(CAL_SCALE_Y_ADDR,myFloat.bytes[0]);
+  EEPROM.write(CAL_SCALE_Y_ADDR+1,myFloat.bytes[1]);
+  EEPROM.write(CAL_SCALE_Y_ADDR+2,myFloat.bytes[2]);
+  EEPROM.write(CAL_SCALE_Y_ADDR+3,myFloat.bytes[3]);
+  EEPROM.commit();
+}
+
+float getEepromCalScaleY() {
+  FLOATUNION_t myFloat;
+  myFloat.bytes[0] = EEPROM.read(CAL_SCALE_Y_ADDR);
+  myFloat.bytes[1] = EEPROM.read(CAL_SCALE_Y_ADDR+1);
+  myFloat.bytes[2] = EEPROM.read(CAL_SCALE_Y_ADDR+2);
+  myFloat.bytes[3] = EEPROM.read(CAL_SCALE_Y_ADDR+3);
+  if (isnan(myFloat.value)) {
+    setEepromCalScaleY(1);
+    return 1;
+  }
+  else return myFloat.value;
 }
