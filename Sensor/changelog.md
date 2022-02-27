@@ -1,5 +1,10 @@
 # Changelog Material Plane Sensor Firmware
-### Firmware v2.1.3 - 26-01-2021
+### Firmware v2.1.4 - 28-02-2022
+<ul>
+    <li>(Beta HW only) Due to a design error, completely draining the battery can brick the sensor. Some code has been added that puts the sensor in hibernation mode if the battery voltage is too low, reducing the chance of draining the battery. The sensor will wake up every 10 minutes to check if the battery voltage is high enough.</li>
+</ul>
+
+### Firmware v2.1.3 - 26-01-2022
 Fixes:
 <ul>
     <li>Sensor would not connect to wifi if the password was of specific lengths (16 characters did not work, possibly other lengths as well). This has been fixed</li>
@@ -19,7 +24,7 @@ Other:
     <li>Big code cleanup and restructuring</li>
 </ul>
 
-### Webserver v1.0.1 - 26-01-2021
+### Webserver v1.0.1 - 26-01-2022
 Fixes:
 <ul>
     <li>The 'Coordinates' window would not always display the correct coordinates</li>

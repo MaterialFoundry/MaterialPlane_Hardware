@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION        "2.1.3"
+#define FIRMWARE_VERSION        "2.1.4"
 
 #define DEVICE_NAME             "materialsensor"
 
@@ -84,6 +84,7 @@
 //MISC
 //=============================================================
 #define BAT_WARNING_PERCENTAGE  25
+#define BAT_SLEEP_VOLTAGE       3.0
 
 #define CAL_CANCEL              0x02
 #define CAL_NEXT                0x03

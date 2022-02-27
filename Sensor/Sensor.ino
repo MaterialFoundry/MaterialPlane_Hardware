@@ -248,6 +248,8 @@ void getBatteryVoltage() {
 
     //Enable charging
     digitalWrite(CHARGE_EN,LOW);
+
+    if (vBat < BAT_SLEEP_VOLTAGE) sleepSensor();
   #endif
 }
 
@@ -358,3 +360,21 @@ uint8_t getBatteryPercentage(float v) {
 void stringToChar(String in, char* out) {
   in.toCharArray(out,in.length()+1);
 }
+
+#if defined(HW_BETA)
+  void sleepSensor() {
+    Serial.println("Low voltage detected, please recharge the sensor. Switching to hibernation.");
+    String msg = "{\"status\":\"lowVoltage\"}";
+    webSocketServer.broadcastTXT(msg);
+    if (serialOutput) Serial.println(msg);
+    
+    //shut down PAJ sensor
+    IRsensor.powerOn(false);
+    
+    //hibernate ESP32 for 10 minutes
+    esp_sleep_enable_timer_wakeup(600000000);
+    esp_deep_sleep_start();
+  
+    ESP.restart();
+  }
+#endif

@@ -37,6 +37,7 @@ void initialization() {
     setRightLED(false);
     
   #elif defined(HW_BETA)
+
     pinMode(EXPOSURE,INPUT);
     
     //Start ID sensor
@@ -76,6 +77,9 @@ void initialization() {
     ledcWrite(LEDR_G_CH, 0);
 
     setRightLED(false);
+
+    getBatteryVoltage();
+    
   #endif
 
   SPIFFS.begin(); 
