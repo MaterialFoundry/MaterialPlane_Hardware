@@ -1,7 +1,10 @@
 unsigned long IRtimeout = 0;
+uint8_t IRpointsOld = 0;
 bool validPointsOld2 = false;
 unsigned long timer = 0;
 unsigned long IRtimer = 0;
+unsigned long invalidPointCounter = 0;
+bool wasValid = false;
 //unsigned long readCount = 0;
 
 void readIR() {
@@ -34,14 +37,26 @@ void readIR() {
     //printIrPoints(IRpoints);
 
     //If no valid points were detected
-    if (IRpoints == 0) {
-      irAddress = 0;
-      irMode = 0;
-    }
+    if (IRpoints == 0)
+      invalidPointCounter++;
+    else
+      invalidPointCounter = 0;
 
-    if (newPoints && (IRpoints > 0 || validPointsOld2) && autoExposureProcedure == EXP_STOPPED)
+    if (newPoints && IRpoints > 0 && autoExposureProcedure == EXP_STOPPED) {
       validPointsOld2 = sendIRpoints(IRpoints);
-
+      IRpointsOld = IRpoints;
+    }
+    else if (invalidPointCounter < dropDelay && wasValid) {
+      validPointsOld2 = sendIRpoints(IRpointsOld, true);
+    }
+    else if (invalidPointCounter >= dropDelay  && wasValid && autoExposureProcedure == EXP_STOPPED) {
+      irAddress = 0;
+      irMode = 129;
+      validPointsOld2 = sendIRpoints(IRpoints);
+    }
+      
+    wasValid = invalidPointCounter >= dropDelay ? false : true;
+    
     autoExpose();
 
     //readCount++;
@@ -100,7 +115,7 @@ void getCal() {
     else if (calibrationMode == CALIBRATION_MULTI) calMode = "multi";
     else return;
     String msg = "{\"status\":\"calibration\",\"mode\":\"" + calMode + "\",\"state\":\"starting\"}";
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
 
     cal_count = 0;
@@ -143,7 +158,7 @@ void getCal() {
   else if (calibrationProcedure == CALIBRATION_CANCEL) {
     Serial.println("Calibration cancelled");
     String msg = "{\"status\":\"calibration\",\"mode\":\"" + calMode + "\",\"state\":\"cancelled\"}";
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
     calibrationProcedure = CALIBRATION_INACTIVE;
     calibrationRunning = false;
@@ -186,14 +201,14 @@ void getCal() {
       }
     }
 
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
   }
 
   if (cal_count == 4) {
     Serial.println("\nCalibration done");
     String msg = "{\"status\":\"calibration\",\"mode\":\"" + calMode + "\",\"state\":\"done\"}";
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
 
     if (calibrationMode == CALIBRATION_OFFSET) {
@@ -372,7 +387,7 @@ void autoExpose() {
 
     String msg = "{\"status\":\"Auto Exposure Done\"}";
     // send message to client
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
 
     IRsensor.setPixelBrightnessThreshold(autoExposureMinBrightness);

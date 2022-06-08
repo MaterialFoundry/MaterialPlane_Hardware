@@ -116,10 +116,14 @@ uint32_t IRRecv::rx_parse_items(rmt_item32_t* item, int item_num, uint8_t timing
 
 void dump_item(rmt_item32_t* item, size_t sz)
 {
-  for (int x=0; x<sz; x++) {
-    log_v("Count: %d  duration0: %d  duration1: %d\n", x,item[x].duration0,item[x].duration1);
-    if(item[x].duration1==0 || item[x].duration0 == 0 || item[x].duration1 > 0x7f00 || item[x].duration0 > 0x7f00) break;
-  }
+    if (sz < 20) return;
+    //Serial.println("\nCount\tT1\tT2");
+    for (int x=0; x<sz; x++) {
+        //log_v("Count: %d  duration0: %d  duration1: %d\n", x,item[x].duration0,item[x].duration1);
+        //Serial.println((String)x + "\t" + (String)item[x].duration0 + "\t" + (String)item[x].duration1);
+        if(item[x].duration1==0 || item[x].duration0 == 0 || item[x].duration1 > 0x7f00 || item[x].duration0 > 0x7f00) break;
+    }
+    //Serial.println('\n');
 }
  
 uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
@@ -132,7 +136,7 @@ uint32_t IRRecv::read(char* &timingGroup, bool preferredOnly)
     //after parsing the data, clear space in the ringbuffer.
     vRingbufferReturnItem(_rb, (void*) item);
 
-    //dump_item(item,rx_size); 
+    if (_debug) dump_item(item,rx_size); 
     uint32_t rx_data;
     uint8_t found_timing = 0;
     for (uint8_t timing : _preferred) {
@@ -206,3 +210,8 @@ void IRRecv::stop()
 }
 
 bool IRRecv::active() {return _active;}    
+
+
+void IRRecv::enableDebug(bool enable) {
+    _debug = enable;
+}

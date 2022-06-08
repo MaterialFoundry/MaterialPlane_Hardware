@@ -25,8 +25,8 @@
 /*
  * IR timing settings
  */
-#define IR_SHORT  480   //us
-#define IR_LONG   980   //us
+#define IR_SHORT  480   //us 480
+#define IR_LONG   980   //us 980
 
 /*
  * ID settings

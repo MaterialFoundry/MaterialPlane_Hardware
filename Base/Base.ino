@@ -62,6 +62,10 @@ void setup() {
   //Enable sleep
   sleep_enable();
 
+  #if defined(IR_FREQUENCY_SWEEP) 
+    frequencySweepMode();
+  #endif
+
   //If base is held upside down, set base into calibration mode
   #if defined(DEBUG)
     if (accel.getZ() < 0) calMode = true;
@@ -255,3 +259,19 @@ void configurePWM() {
     Serial.println();
   }
 #endif
+
+void frequencySweepMode() {
+  int frequency = IR_FREQUENCY_START;
+  bool led = true;
+
+  while(1) {
+    digitalWrite(LED, led);
+    led = !led;
+    TCA0.SPLIT.HPER=frequency;
+    for (int i=0; i<IR_FREQUENCY_REPEATS; i++)
+      sendIR(frequency);
+    frequency += IR_FREQUENCY_STEP;
+    if (frequency >= IR_FREQUENCY_END)
+      frequency = IR_FREQUENCY_START;
+  }
+}

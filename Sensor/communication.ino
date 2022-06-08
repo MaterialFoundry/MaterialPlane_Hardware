@@ -96,6 +96,7 @@ uint8_t analyzeMessage(String msg) {
       if      (recArray[2] == "AVERAGE")        Serial.println("Average Count: " + (String)IRsensor.getAverageCount());
       else if (recArray[2] == "GAIN")           Serial.println("Gain: " + (String)IRsensor.getGain());
       else if (recArray[2] == "BRIGHTNESS")     Serial.println("Brightness Threshold: " + (String)IRsensor.getPixelBrightnessThreshold());
+      else if (recArray[2] == "DROPDELAY")      Serial.println("Drop Delay: " + (String)dropDelayTime + "ms");
       #if defined(HW_BETA)
         else if (recArray[2] == "FRAMEPERIOD")  Serial.println("IR Frame Period: " + (String)IRsensor.getFramePeriod() + "ms (Frame Rate: " + (String)(1000/IRsensor.getFramePeriod()) + "Hz)");
         else if (recArray[2] == "EXPOSURE")     Serial.println("Exposure Time: " + (String)IRsensor.getExposureTime() + "ms");
@@ -131,6 +132,10 @@ uint8_t analyzeMessage(String msg) {
       debug = (recArray[2] == "1" || recArray[2] == "TRUE");
       setEepromDebug(debug);
       Serial.println("Debug set to: " + (String)(debug ? "Enabled" : "Disabled"));
+
+      #if defined(HW_BETA)
+        IDsensor.enableDebug(true);
+      #endif
     }
 
     else if (recArray[1] == "DEFAULT") {
@@ -254,8 +259,16 @@ uint8_t analyzeMessage(String msg) {
         //#endif
         IRsensor.setFramePeriod(fPeriod);
         setEepromIrFramePeriod(fPeriod);
+        dropDelay = dropDelayTime/fPeriod;
         delay(10);
         Serial.println("IR frame period set to: " + (String)fPeriod + "ms");
+      }
+      else if (recArray[2] == "DROPDELAY") {
+        setEepromIrDropDelay(recArray[3].toInt());
+        dropDelayTime = getEepromIrDropDelay();
+        dropDelay = dropDelayTime/IRsensor.getFramePeriod();
+        delay(10);
+        Serial.println("Drop delay time set to: " + (String)dropDelayTime + "ms");
       }
       else if (recArray[2] == "AUTOEXPOSE") {
         autoExposureProcedure = EXP_START;
@@ -380,7 +393,7 @@ uint8_t analyzeMessage(String msg) {
       }
     }
     wsMsg += "]}";
-    if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(wsMsg);
+    if (wsMode != WS_MODE_OFF) broadcastWs(wsMsg);
     if (serialOutput) Serial.println(wsMsg);
     Serial.println(msg);
   }
@@ -433,6 +446,7 @@ void printHelp(){
   msg += " SET/GET IR MINAREA [area]\t\t- 8bit integer\n";
   msg += " SET/GET IR MAXAREA [area]\t\t- 16bit integer\n";
   msg += " SET/GET IR POINTS [points]\t\t- 0 to 16, integer\n\n";
+  msg += " SET/GET IR DROPDELAY [drop delay time]\t\t- 0 to 2500, integer\n\n";
   
   msg += " PERFORM CALIBRATION [method]\t\t- SINGLE/MULTI\n";
   msg += " PERFORM OFFSET [method]\t\t- SINGLE/MULTI\n";
@@ -467,6 +481,7 @@ void printStatus() {
     msg += "Hardware Version:\tBeta\n";
   #endif
   msg += "Firmware Version:\tv" + (String)FIRMWARE_VERSION + '\n';
+  msg += "Webserver Version:\tv" + webserverVersion + '\n';
   msg += "Debugging:\t\t" + (String)(debug ? "Enabled" : "Disabled") + '\n';
   msg += "Serial Output:\t\t" + (String)(serialOutput ? "Enabled" : "Disabled") + '\n';
   Serial.print(msg);
@@ -512,6 +527,7 @@ void printStatus() {
     msg += "Gain:\t\t\t" + (String)IRsensor.getGain() + '\n';
     msg += "Brightness Threshold:\t" + (String)IRsensor.getPixelBrightnessThreshold() + '\n';
   #endif
+  msg += "Drop Delay Time:\t" + (String)dropDelayTime + "ms\n";
   Serial.print(msg);
   
   msg = "\nCALIBRATION\n";
@@ -548,25 +564,25 @@ void updateSettings(){
   }
   
   #if defined(HW_BETA)
-    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":\"Beta\",";
+    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"webserver\":\"" + webserverVersion + "\",\"hardware\":\"Beta\",";
   #elif defined(HW_DIY_FULL)
-    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":\"DIY Full\",";
+    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"webserver\":\"" + webserverVersion + "\",\"hardware\":\"DIY Full\",";
   #else
-    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"hardware\":\"DIY Basic\",";
+    String msg = "{\"status\":\"update\",\"firmware\":\"" + (String)FIRMWARE_VERSION + "\",\"webserver\":\"" + webserverVersion + "\",\"hardware\":\"DIY Basic\",";
   #endif
   
   msg += "\"sett\":{\"debug\":" + (String)debug + ",\"serialOut\":" + (String)serialOutput + "},";
   msg += "\"network\":{\"ssid\":\"" + ssidString + "\",\"ipAddress\":\"" + WiFi.localIP().toString().c_str() + "\",\"name\":\"" + nameString + "\",\"connected\":" + (String)WiFi.isConnected() + ",\"wsMode\":\"" + websocketMode + "\",\"wsPort\":" + (String)wsPort + ",\"wsClients\":[" +wsClients + "]},";
   msg += "\"cal\":{\"calibrationEnable\":" + (String)IRsensor.getCalibrationEnable() + ",\"offsetEnable\":" + (String)IRsensor.getCalibrationOffsetEnable() + ",\"mirrorX\":" + (String)IRsensor.getMirrorX() + ",\"mirrorY\":" + (String)IRsensor.getMirrorY() + ",\"rotation\":" + (String)IRsensor.getRotation() + ",\"offsetX\":" + (String)IRsensor.getOffsetX() + ",\"offsetY\":" + (String)IRsensor.getOffsetY() + ",\"scaleX\":" + (String)IRsensor.getScaleX() + ",\"scaleY\":" + (String)IRsensor.getScaleY() + "},";
   #if defined(HW_BETA)
-    msg += "\"ir\":{\"averageCount\":" + (String)IRsensor.getAverageCount() + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + "}";
+    msg += "\"ir\":{\"averageCount\":" + (String)IRsensor.getAverageCount() + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"exposure\":" + (String)IRsensor.getExposureTime() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"noise\":" + (String)IRsensor.getPixelNoiseTreshold() + ",\"minArea\":" + (String)IRsensor.getMinAreaThreshold() + ",\"maxArea\":" + (String)IRsensor.getMaxAreaThreshold() + ",\"points\":" + (String)IRsensor.getObjectNumberSetting() + ",\"dropDelay\":" + (String)dropDelayTime + "}";
   #else
-    msg += "\"ir\":{\"averageCount\":" + (String)IRsensor.getAverageCount() + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + "}";
+    msg += "\"ir\":{\"averageCount\":" + (String)IRsensor.getAverageCount() + ",\"framePeriod\":" + (String)IRsensor.getFramePeriod() + ",\"gain\":" + (String)IRsensor.getGain() + ",\"brightness\":" + (String)IRsensor.getPixelBrightnessThreshold() + ",\"dropDelay\":" + (String)dropDelayTime + "}";
   #endif
   
   msg += "}";
   // send message to client
-  if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+  if (wsMode != WS_MODE_OFF) broadcastWs(msg);
   if (serialOutput) Serial.println(msg);
 }
 
@@ -577,7 +593,7 @@ void sendIRcode(char* rcvGroup, uint32_t result) {
   if (debug) Serial.println("IR rec: " + (String)rcvGroup + '\t' + (String)result);
   String msg = "{\"status\":\"IRcode\",\"data\":{\"protocol\":\"" + (String)rcvGroup + "\",\"code\":" + (String)result + "}}";
 
-  if (wsMode != WS_MODE_OFF) webSocketServer.broadcastTXT(msg);
+  if (wsMode != WS_MODE_OFF) broadcastWs(msg);
   if (serialOutput) Serial.println(msg);
 }
 
@@ -594,7 +610,7 @@ void pingLoop( void * parameter ) {
     else msg += "calibration";
 
     msg += "\",\"battery\":{\"voltage\":" + (String)vBat + ",\"percentage\":" + (String)batPercentage + ",\"charging\":" + (String)chargeState + ",\"usbActive\":" + (String)usbActive + "}}";
-    webSocketServer.broadcastTXT(msg);
+    broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
     delay(PING_PERIOD);
   }
@@ -604,35 +620,39 @@ void pingLoop( void * parameter ) {
  * Send the detected IR points in JSON format to websocket clients and/or serial port
  */
 bool validPointsArray[16];
- 
-bool sendIRpoints(uint8_t IRpoints){
-  char msgBuffer[MSG_LENGTH] = "";
-  //sprintf(msgBuffer,"");
-  sprintf(msgBuffer+strlen(msgBuffer),"{\"status\":\"IR data\",\"points\":%d,\"data\":[",IRpoints);
-  bool msgStarted = false;
-  //Check each valid IR point
-  for (int i=0; i<IRsensor.getObjectNumberSetting(); i++){
-      //If IR point is valid
-      if (IRsensor.irPoints[i].valid > 0) {
-        //print the data for that IR point
-        validPointsArray[i] = true;
-        if (msgStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
-        sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"x\":%.2f,\"y\":%.2f,\"maxBrightness\":%.2f,\"id\":%d,\"command\":%d",i,IRsensor.irPoints[i].x,IRsensor.irPoints[i].y,IRsensor.irPoints[i].maxBrightness,irAddress,irMode);
-        #if defined(HW_BETA)
-          if (calOpen) sprintf(msgBuffer+strlen(msgBuffer),",\"avgBrightness\":%.2f,\"area\":%d,\"radius\":%d",IRsensor.irPoints[i].avgBrightness,IRsensor.irPoints[i].area,IRsensor.irPoints[i].radius);
-        #endif
-        sprintf(msgBuffer+strlen(msgBuffer),"}");
-        msgStarted = true;
+char msgBuffer[MSG_LENGTH] = "";
+
+bool sendIRpoints(uint8_t IRpoints, bool repeat=false){
+  //char msgBuffer[MSG_LENGTH] = "";
+  if (repeat == false) {
+    sprintf(msgBuffer,"");
+    sprintf(msgBuffer+strlen(msgBuffer),"{\"status\":\"IR data\",\"points\":%d,\"data\":[",IRpoints);
+    bool msgStarted = false;
+    //Check each valid IR point
+    for (int i=0; i<IRsensor.getObjectNumberSetting(); i++){
+        //If IR point is valid
+        if (IRsensor.irPoints[i].valid > 0) {
+          //print the data for that IR point
+          validPointsArray[i] = true;
+          if (msgStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
+          sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"x\":%.2f,\"y\":%.2f,\"maxBrightness\":%.2f,\"id\":%d,\"command\":%d",i,IRsensor.irPoints[i].x,IRsensor.irPoints[i].y,IRsensor.irPoints[i].maxBrightness,irAddress,irMode);
+          #if defined(HW_BETA)
+            if (calOpen) sprintf(msgBuffer+strlen(msgBuffer),",\"avgBrightness\":%.2f,\"area\":%d,\"radius\":%d",IRsensor.irPoints[i].avgBrightness,IRsensor.irPoints[i].area,IRsensor.irPoints[i].radius);
+          #endif
+          sprintf(msgBuffer+strlen(msgBuffer),"}");
+          msgStarted = true;
+        }
+        else if (validPointsArray[i] == true) {
+          validPointsArray[i] = false;
+          if (msgStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
+          sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"id\":%d,\"command\":129}",i,irAddress);
+          msgStarted = true;
+        }
       }
-      else if (validPointsArray[i] == true) {
-        validPointsArray[i] = false;
-        if (msgStarted) sprintf(msgBuffer+strlen(msgBuffer),",");
-        sprintf(msgBuffer+strlen(msgBuffer),"{\"point\":%d,\"id\":%d,\"command\":129}",i,irAddress);
-        msgStarted = true;
-      }
+      sprintf(msgBuffer+strlen(msgBuffer),"]}");
   }
-  sprintf(msgBuffer+strlen(msgBuffer),"]}");
+
   if (serialOutput) Serial.println(msgBuffer);
-  webSocketServer.broadcastTXT(msgBuffer);
+  broadcastWs(msgBuffer);
   return (IRpoints > 0);
 }

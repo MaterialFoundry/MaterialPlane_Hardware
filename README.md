@@ -38,3 +38,19 @@ Everything in this repository, with the exception of some libraries used by the 
 <li><b><a href="https://github.com/Links2004/arduinoWebSockets">Link</a></b></li>
 <li><b>Edits Made: </b>None</li>
 </ul>
+
+<b>ESPAsyncWebServer</b>
+<ul>
+<li><b>Author(s): </b>me-no-dev</li>
+<li><b>License: </b>LGPL-2.1</li>
+<li><b><a href="https://github.com/me-no-dev/ESPAsyncWebServer">Link</a></b></li>
+<li><b>Edits Made: </b>Modified library includes to point to local libraries</li>
+</ul>
+
+<b>AsyncTCP</b>
+<ul>
+<li><b>Author(s): </b>me-no-dev</li>
+<li><b>License: </b>LGPL-3.0</li>
+<li><b><a href="https://github.com/me-no-dev/AsyncTCP">Link</a></b></li>
+<li><b>Edits Made: </b>Modified library includes to point to local libraries</li>
+</ul>

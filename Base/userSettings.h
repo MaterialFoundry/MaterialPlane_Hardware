@@ -51,3 +51,23 @@
  * Default: 2
  */
 #define STOP_REPEATS 5
+
+/*
+ * IR_FREQUENCY_SWEEP
+ * Uncommenting '#define IR_FREQUENCY_SWEEP' (removing '//') will put the base in IR frequency sweep mode.
+ * In this mode, the base will not function as normal, instead, it will emit IR light at an increasing frequency for debugging purposes (in case the sensor isn't properly picking up the base ID).
+ * It will sweep the value of PWM_COUNT starting at IR_FREQUENCY_START ending at IR_FREQUENCY_END in steps of IR_FREQUENCY_STEP. It will repeat each frequency IR_FREQUENCY_REPEATS times.
+ * 
+ * To use: observe the 'Coordinates' section in the sensor's webserver or within the Foundry 'Sensor Configuration'. Make sure the base is detected by the sensor (point 0 is showing data), and then observe the 'Command' field. 
+ * At some point it should start displaying a value and counting up until the value stays constant. Look for the range of values that follow a consistent pattern (so using the default settings, an increase of 5 every second or so).
+ * Take the middle value that falls in this range, and fill that in as PWM_COUNT in definitions.h. Then comment '#define IR_FREQUENCY_SWEEP' again by placing '//' before it, and reupload the firmware.
+ * 
+ * See this video for a demonstration: https://youtu.be/oVvm5mzcHHQ
+ * You can see that it starts detecting the command at 80, and stops at 170. It also displays 250, but since this fell out of the consistent pattern, we can ignore it. To find the correct value for PWM_COUNT, we calculate the middle value:
+ * (170-80)/2 + 80 = 125  [(maxValue-minValue)/2 + minValue]. You can increase the precision by decreasing IR_FREQUENCY_STEP or increasing IR_FREQUENCY_REPEATS, but this will increase the time it takes to perform this test.
+ */
+//#define IR_FREQUENCY_SWEEP
+#define IR_FREQUENCY_START    10
+#define IR_FREQUENCY_END      255
+#define IR_FREQUENCY_STEP     5
+#define IR_FREQUENCY_REPEATS  5

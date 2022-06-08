@@ -1,2 +1,0 @@
-const ipAddress = "";
-const wsPort = "";

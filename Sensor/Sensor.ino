@@ -1,7 +1,6 @@
 #include "configuration.h"
 #include "userSettings.h"
 #include "src/WebSocketsServer/src/WebSocketsServer.h"
-//#include "src/homography/homography.h"
 #include "esp32-hal-cpu.h"
 #include <esp_task_wdt.h>
 #include <WiFi.h>
@@ -10,9 +9,11 @@
 #include <DNSServer.h>
 #include "FS.h"
 #include "SPIFFS.h"
-#include "src/ESP32WebServer/src/ESP32WebServer.h"
 #include "esp_adc_cal.h"
-
+#include "src/AsyncTCP/src/AsyncTCP.h"
+#include "src/ESPAsyncWebServer/src/ESPAsyncWebServer.h"
+#include "src/ESPAsyncWebServer/src/SPIFFSEditor.h"
+#include <ArduinoOTA.h>
 
 #if defined(HW_DIY_BASIC)
   #include "src/wiiCam/wiiCam.h"
@@ -38,6 +39,7 @@
 
 bool debug = false;
 bool serialOutput = false;
+String webserverVersion = "";
 
 /**
  * IR Sensor variables
@@ -47,6 +49,8 @@ bool calOpen = true;
 volatile uint8_t calibrationProcedure = 0;
 volatile uint8_t calibrationMode = 0;
 bool calibrationRunning = false;
+uint8_t dropDelay;
+uint16_t dropDelayTime;
 
 /**
  * Websocket variables
@@ -93,11 +97,9 @@ uint8_t usbCounter = 0;
 uint8_t batPercentage = 0;
 uint8_t autoExposureProcedure = EXP_STOPPED;
 
-
-ESP32WebServer webServer(80);
-DNSServer dnsServer;
+AsyncWebServer webServer(80);
 WebSocketsServer webSocketServer = WebSocketsServer(wsPort);
-//homography cal;
+DNSServer dnsServer;
 
 //Tasks
 TaskHandle_t irSensorTask;
@@ -115,7 +117,6 @@ void setup() {
 
 void core0Loop( void * parameter ) {
  while(1) {
-  webServer.handleClient();
   if (WiFi.status() != WL_CONNECTED) {
     dnsServer.processNextRequest();
   }
@@ -137,13 +138,13 @@ void core0Loop( void * parameter ) {
 
 void loop() {
   readIR();
+  webSocketServer.loop();
 
   if (Serial.available() > 0) {
       bool result = checkSerial(); 
       if (result == true) if (debug) Serial.println("OK");
       else if (result == false) if (debug) Serial.println("ERROR"); 
     }
-    webSocketServer.loop();
 
   #if defined(HW_DIY_FULL) 
     if (millis()-ledTimer >= 2){
@@ -365,7 +366,7 @@ void stringToChar(String in, char* out) {
   void sleepSensor() {
     Serial.println("Low voltage detected, please recharge the sensor. Switching to hibernation.");
     String msg = "{\"status\":\"lowVoltage\"}";
-    webSocketServer.broadcastTXT(msg);
+    broadcastWs(msg);
     if (serialOutput) Serial.println(msg);
     
     //shut down PAJ sensor

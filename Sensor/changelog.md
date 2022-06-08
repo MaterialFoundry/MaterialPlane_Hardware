@@ -1,4 +1,20 @@
 # Changelog Material Plane Sensor Firmware
+
+### Firmware v2.1.5 - 08-06-2022
+<ul>
+    <li>Added OTA update capability</li>
+    <li>A different webserver library is used, which is faster and works on more browsers</li>
+    <li>Sensor now properly transmits that no bases have been detected</li>
+    <li>Added a 'Drop Delay' setting to filter out short periods of time where the sensor cannot see a base</li>
+</ul>
+
+### Webserver v1.0.3 - 08-06-2022
+<ul>
+    <li>Added OTA update capability</li>
+    <li>Displayed points in the IR Tracker tab are now colored and numbered</li>
+    <li>Updated the formatting of the IR Tracker tab</li>
+</ul>
+
 ### Firmware v2.1.4 - 28-02-2022
 <ul>
     <li>(Beta HW only) Due to a design error, completely draining the battery can brick the sensor. Some code has been added that puts the sensor in hibernation mode if the battery voltage is too low, reducing the chance of draining the battery. The sensor will wake up every 10 minutes to check if the battery voltage is high enough.</li>

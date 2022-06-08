@@ -336,8 +336,8 @@ bool PAJ7025R3::getOutput(uint8_t format){
   digitalWrite(_cs,HIGH);
   
   detectedPoints = 0;
-  _avgCounter++;
   bool newPoints = false;
+  _avgCounter++;
 
   for (int i=0; i<objectNumber; i++){
     getMeasuredPoint(i);
@@ -408,6 +408,10 @@ void PAJ7025R3::getMeasuredPoint(uint8_t point){
       irPoints[point].y = 0;
       irPoints[point].avgBrightness = 0;
       irPoints[point].maxBrightness = 0;
+      _avgPoints[point].x += _avgPoints[point].x/_avgCounter;
+      _avgPoints[point].y += _avgPoints[point].y/_avgCounter;
+      _avgPoints[point].avgBrightness += _avgPoints[point].avgBrightness/_avgCounter;
+      _avgPoints[point].maxBrightness += _avgPoints[point].maxBrightness/_avgCounter;
       return;
     }
   }

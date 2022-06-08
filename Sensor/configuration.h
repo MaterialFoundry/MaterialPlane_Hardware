@@ -1,5 +1,5 @@
 
-#define FIRMWARE_VERSION        "2.1.4"
+#define FIRMWARE_VERSION        "2.1.5"
 
 #define DEVICE_NAME             "materialsensor"
 
@@ -79,6 +79,8 @@
  * The MAX_IR_POINTS setting sets the maximum number of points the sensor will track.
  */
  #define MAX_IR_POINTS          16
+
+ #define DROP_DELAY_TIME        250
 
 //=============================================================
 //MISC

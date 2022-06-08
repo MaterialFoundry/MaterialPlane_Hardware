@@ -1,22 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
   <title>Material Sensor</title>
 </head>
 
 <body id="index">
 
-  <script>
-    
-    
-  </script>
+  <script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
 
   <div class="center">
     
     <div class="waitMessage" id="waitMessage">
-      <img src="banner.jpg" alt="Banner" style="width:600px">
       <h1>Material Plane Sensor</h1>
       <div id="waitMessageTxt">
         Establishing websocket connection with the sensor.<br>
@@ -59,22 +57,37 @@
 
       <hr>
 
-      <h3>Battery</h3>
-      <div class="settings">
-        <label>Charging State:</label>
-        <labelRight id="chargingState"></labelRight>
+      <div class="diy_basic">
+        <h3>Battery</h3>
+        <div class="settings">
+          <label>Charging State:</label>
+          <labelRight id="chargingState"></labelRight>
+        </div>
+        <div class="settings PAJsensor">
+          <label>USB Connected:</label>
+          <labelRight id="usbConnected"></labelRight>
+        </div>
+        <div class="settings">
+          <label>Voltage:</label>
+          <labelRight id="batteryVoltage"></labelRight>
+        </div>
+        <div class="settings">
+          <label>Percentage:</label>
+          <labelRight id="batteryPercentage"></labelRight>
+        </div>
+        <hr>
       </div>
-      <div class="settings PAJsensor">
-        <label>USB Connected:</label>
-        <labelRight id="usbConnected"></labelRight>
-      </div>
-      <div class="settings">
-        <label>Voltage:</label>
-        <labelRight id="batteryVoltage"></labelRight>
-      </div>
-      <div class="settings">
-        <label>Percentage:</label>
-        <labelRight id="batteryPercentage"></labelRight>
+      
+      <h3>Update</h3>
+      <form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>
+        <div class="update">
+          <label>Update</label>
+            <input type='file' name='update' id='updateFirmware' accept=".bin">
+            <input type='submit' value='Update' id='updateFirmwareBtn'>
+        </div>
+      </form>
+      <div id="prgBar" style="display:none">
+        <div id="prg"></div>
       </div>
 
       <hr>
@@ -162,48 +175,48 @@
               <th style="width:16.6%">Point</th>
               <th style="width:16.6%">X</th>
               <th style="width:16.6%">Y</th> 
-              <th class="PAJsensor" style="width:16.6%">Average Brightness</th>
+              <th class="mpBeta" style="width:16.6%">Average Brightness</th>
               <th style="width:16.6%">Maximum Brightness</th>
-              <th class="PAJsensor" style="width:16.6%">Area</th>
+              <th class="mpBeta" style="width:16.6%">Area</th>
             </tr>
             <tr>
               <td id="iteration0" style="color:grey">0</td>
               <td id="cal_x0" style="color:grey">0</td>
               <td id="cal_y0" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_ab0" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_ab0" style="color:grey">0</td>
               <td id="cal_mb0" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_a0" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_a0" style="color:grey">0</td>
             </tr>
             <tr>
               <td id="iteration1" style="color:grey">1</td>
               <td id="cal_x1" style="color:grey">0</td>
               <td id="cal_y1" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_ab1" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_ab1" style="color:grey">0</td>
               <td id="cal_mb1" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_a1" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_a1" style="color:grey">0</td>
             </tr>
             <tr>
               <td id="iteration2" style="color:grey">2</td>
               <td id="cal_x2" style="color:grey">0</td>
               <td id="cal_y2" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_ab2" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_ab2" style="color:grey">0</td>
               <td id="cal_mb2" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_a2" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_a2" style="color:grey">0</td>
             </tr>
             <tr>
               <td id="iteration3" style="color:grey">3</td>
               <td id="cal_x3" style="color:grey">0</td>
               <td id="cal_y3" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_ab3" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_ab3" style="color:grey">0</td>
               <td id="cal_mb3" style="color:grey">0</td>
-              <td class="PAJsensor" id="cal_a3" style="color:grey">0</td>
+              <td class="mpBeta" id="cal_a3" style="color:grey">0</td>
             </tr>
           </table>     
         </div>
 
         <BR CLEAR="right" />
 
-        <div class="form-group options">   
+        <div class="form-group options mpBeta">   
           <table style="text-align:center;min-width:300px;max-width:300px">
             <tr>
                 <th style="width:50%">ID</th>
@@ -223,140 +236,184 @@
       <h2>Settings</h2>
       <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Exposure</h3> 
       <div class="collapsed">
-        <p class="notes PAJsensor">
-            'Auto Exposure' attempts to automatically configure the exposure settings. Place a base or the pen in a corner of the screen, and make sure the IR led is on (tilt the base, if necessary).
-            The procedure can take a few seconds, the settings will automatically be updated after the procedure.
-        </p>
-        <p class="notes PAJsensor">
-            'Exposure' sets the length of time the sensor will measure, higher values result in higher brightness.
-        </p>
-        <p class="notes">
-            'Frame Period' is the time between each measurement. Lower values increase responsiveness, but reduces the maximum exposure time (max exposure time = Frame Period - 2.7ms).
-        </p>
-        <p class="notes">
-            'Gain' is a brightness multiplier. Higher values will increase brightness, but also noise.
-        </p>
-        <div class="settings PAJsensor">
-            <label>Auto Exposure:</label>
-            <button id="autoExposure" type="button" style="width:50%">
-                <i></i> Auto Exposure
-            </button>
+        <!-- Auto Exposure -->
+        <div class="mpConfigFormElements">
+          <label for="mpAutoExposure">Auto Exposure</label>
+          <div class="mpConfigFormBtn">
+            <button id="mpAutoExposure" type="button"><i></i>Auto Exposure</button>
+          </div>
         </div>
-        <div class="settings PAJsensor">
-            <label>Exposure (ms):</label>
-            <input type="range" min="2" max="1300" value="300" class="slider" id="exposure">
-            <input type="text" id="exposureNumber" value="3">
+        <p class="mpConfigNotes">Attempts to automatically configure the exposure settings. Place a base or the pen in a corner of the screen, and make sure the IR led is on (tilt the base, if necessary). The procedure can take a few seconds, the settings will automatically be updated after the procedure.</p>
+
+        <!-- Exposure -->
+        <div class="mpConfigFormElements mpBeta">
+          <label for="mpSensorExposure">Exposure (ms)</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorExposure" min=0.02 max=13 step=0.01 value={{sensor.ir.exposure}}>
+            <input type="number" id="mpSensorExposureNumber" value={{sensor.ir.exposure}}>
+          </div>
         </div>
+        <p class="mpConfigNotes mpBeta">Sets the length of time the sensor will measure, higher values result in higher brightness.</p>
+
+        <!-- Frame Period -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorFramePeriod">Frame Period (ms)</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorFramePeriod" min=5 max=100 step=0.1 value={{sensor.ir.framePeriod}}>
+            <input type="number" id="mpSensorFramePeriodNumber" value={{sensor.ir.framePeriod}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">The time between each measurement. Lower values increase responsiveness, but reduces the maximum exposure time (max exposure time = Frame Period - 2.7ms).</p>
+
+        <!-- Gain -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorGain">Gain</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorGain" min=1 max=8 step=0.1 value={{sensor.ir.gain}}>
+            <input type="number" id="mpSensorGainNumber" value={{sensor.ir.gain}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Brightness multiplier. Higher values will increase brightness, but also noise.</p>
         
-        <div class="settings">
-            <label>Frame Period (ms):</label>
-            <input type="range" min="50" max="1000" value="25" class="slider" id="framePeriod">
-            <input type="text" id="framePeriodNumber" value="25">
-        </div>
-        <div class="settings">
-            <label>Gain:</label>
-            <input type="range" min="10" max="80" value="20" class="slider" id="gain">
-            <input type="text" id="gainNumber" value="2">
-        </div>
+        <hr>
       </div>
 
       <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Noise Filter</h3> 
       <div class="collapsed">
-        <p class="notes PAJsensor">
-            Measured IR spots will be considered either as noise or part of a point. Each IR spot with maximum brightness higher than 'Minimum Brightness' (that is not directly neighboring other spots with high enough brightness) are considered individual points.<br>
-            Spots with lower brightness, but higher than 'Minimum Brightness' - 'Noise Treshold' will be considered as part of the nearest point (if there are any). Otherwise they will be considered noise and ignored.<br>
-            'Average Count' sets the amount of measurements the sensor takes an average. Higher values decrease noise, but also decrease responsiveness.
-        </p>
-        <p class="notes">
-          Measured IR spots with lower brightness than 'Minimum Brightness' will be ignored.<br>
-          'Average Count' sets the amount of measurements the sensor takes an average. Higher values decrease noise, but also decrease responsiveness.
-        </p>
-        <div class="settings">
-            <label>Minimum Brightness:</label>
-            <input type="range"min="0" max="255" value="127" class="slider" id="brightness">
-            <input type="text" id="brightnessNumber" value="127">
+        <!-- Average Count -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorAverage">Average Count</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorAverage" min=1 max=20 value={{sensor.ir.averageCount}}>
+            <input type="number" id="mpSensorAverageNumber" value={{sensor.ir.averageCount}}>
+          </div>
         </div>
-        <div class="settings PAJsensor">
-            <label>Noise Treshold:</label>
-            <input type="range" min="0" max="255" value="20" class="slider" id="noise">
-            <input type="text" id="noiseNumber" value="20">
+        <p class="mpConfigNotes">Sets the amount of measurements the sensor takes to average. Higher values decrease noise, but also decrease responsiveness.</p>
+
+        <!-- Average Count -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorDropDelay">Drop Delay (ms)</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorDropDelay" min=0 max=2500 step=10 value={{sensor.ir.dropDelay}}>
+            <input type="number" id="mpSensorDropDelayNumber" value={{sensor.ir.dropDelay}}>
+          </div>
         </div>
-        <div class="settings">
-            <label>Average Count:</label>
-            <input type="range" min="0" max="20" value="10" class="slider" id="average">
-            <input type="text" id="averageNumber" value="10">
+        <p class="mpConfigNotes">Sets the amount of time in ms that no bases are detected before the sensor reports this.</p>
+
+        <!-- Minimum Brightness -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorMinBrightness">Minimum Brightness</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorMinBrightness" min=0 max=255 value={{sensor.ir.brightness}}>
+            <input type="number" id="mpSensorMinBrightnessNumber" value={{sensor.ir.brightness}}>
+          </div>
         </div>
+        <p class="mpConfigNotes">IR spots with a brightness lower than this will be ignored.</p>
+
+        <!-- Noise Threshold -->
+        <div class="mpConfigFormElements mpBeta">
+          <label for="mpSensorNoise">Noise Threshold</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorNoise" min=0 max=255 value={{sensor.ir.noise}}>
+            <input type="number" id="mpSensorNoiseNumber" value={{sensor.ir.noise}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes mpBeta">Neighboring IR spots with brightness higher than ['Minimum Brightness' - 'Noise Threshold'] will be considered as part of the same spot.</p>
+
+        <hr>
       </div>
 
       <h3 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Transform</h3>  
       <div class="collapsed">
-        <p class="notes">
-            'Mirror X' and 'Mirror Y' will mirror the point's location in X and Y direction.<br>
-            'Rotate' will rotate everything 90 degrees (X becomes Y and Y becomes X).<br>
-            'X Offset' and 'Y Offset' will shift the measured point by the set value to fix alignment issues.<br>
-            'X Scale' and 'Y Scale' will scale the coordinate of the measured point from the center.
-        </p>
-        <div class="settings">
-            <label>Mirror X:</label>
-            <input type="checkbox" id="mirX">
+        <!-- Mirror X -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorMirrorX">Mirror X</label>
+          <div class="mpConfigFormVal">
+            <input type="checkbox" id="mpSensorMirrorX" {{#if sensor.cal.mirrorX}}checked{{/if}}>
+          </div>
         </div>
-        <div class="settings">
-            <label>Mirror Y:</label>
-            <input type="checkbox" id="mirY">
-        </div>
-        <div class="settings">
-            <label>Rotate:</label>
-            <input type="checkbox" id="rot">
-        </div>
-        <div class="settings">
-            <label>X Offset:</label>
-            <input type="range" min="-100" max="100" value="0" class="slider" id="xOffset">
-            <input type="text" id="xOffsetNumber" value="0">
-        </div>
-        <div class="settings">
-            <label>Y Offset:</label>
-            <input type="range" min="-100" max="100" value="0" class="slider" id="yOffset">
-            <input type="text" id="yOffsetNumber" value="0">
-        </div>
-        <div class="settings">
-          <label>X Scale:</label>
-          <input type="range" min="0" max="2" value="1" step="0.01" class="slider" id="xScale">
-          <input type="text" id="xScaleNumber" value="1">
-      </div>
-      <div class="settings">
-          <label>Y Scale:</label>
-          <input type="range" min="0" max="2" value="1" step="0.01" class="slider" id="yScale">
-          <input type="text" id="yScaleNumber" value="1">
-      </div>
-      </div>
+        <p class="mpConfigNotes">Mirrors the coordinates in the X-direction.</p>
 
+        <!-- Mirror Y -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorMirrorY">Mirror Y</label>
+          <div class="mpConfigFormVal">
+            <input type="checkbox" id="mpSensorMirrorY" {{#if sensor.cal.mirrorY}}checked{{/if}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Mirrors the coordinates in the Y-direction.</p>
+
+        <!-- Rotate -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorRotate">Rotate</label>
+          <div class="mpConfigFormVal">
+            <input type="checkbox" id="mpSensorRotate" {{#if sensor.cal.rotate}}checked{{/if}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Rotates the coordinates 90 degrees, by swapping the X and Y-axis.</p>
+
+        <!-- X Offset -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorOffsetX">X Offset</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorOffsetX" min=-100 max=100 value={{sensor.cal.offsetX}}>
+            <input type="number" id="mpSensorOffsetXNumber" value={{sensor.cal.offsetX}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Shifts all coordinates on the X-axis by a set value to fix alignment issues.</p>
+
+        <!-- Y Offset -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorOffsetY">Y Offset</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorOffsetY" min=-100 max=100 value={{sensor.cal.offsetY}}>
+            <input type="number" id="mpSensorOffsetYNumber" value={{sensor.cal.offsetY}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Shifts all coordinates on the Y-axis by a set value to fix alignment issues.</p>
+
+        <!-- X Scale -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorScaleX">X Scale</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorScaleX" min=0 max=2 step=0.01 value={{sensor.cal.scaleX}}>
+            <input type="number" id="mpSensorScaleXNumber" value={{sensor.cal.scaleX}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Scales all coordinates on the X-axis by a set value to fix alignment issues.</p>
+
+        <!-- Y Scale -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorScaleY">Y Scale</label>
+          <div class="mpConfigFormValRange">
+            <input type="range" id="mpSensorScaleY" min=0 max=2 step=0.01 value={{sensor.cal.scaleY}}>
+            <input type="number" id="mpSensorScaleYNumber" value={{sensor.cal.scaleY}}>
+          </div>
+        </div>
+        <p class="mpConfigNotes">Scales all coordinates on the Y-axis by a set value to fix alignment issues.</p>
+
+        
+      </div>
       <hr>
-
       <h2 class="expandable"><img src="right.png" class="expandableIcon" style="width:20px">Calibration</h2>  
       <div class="collapsed">
-        <p class="notes">
-            Calibration and offset are enabled when the 'Calibration Enabled' and 'Offset Enabled' boxes are checked.<br>
-            'Calibration Method' can be set to either 'Single Point' calibration (calibrate each calibration point separately) or 'Multipoint' calibration (calibrate all calibration points at the same time).<br>
-            The 'Calibrate' button will start the calibration procedure.
-        </p>
-        <div class="settings">
-            <label>Calibration Enabled:</label>
-            <input type="checkbox" id="calEn">
+        <!-- Calibration Enabled -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorCalEn">Calibration Enabled</label>
+          <div class="mpConfigFormVal">
+            <input type="checkbox" id="mpSensorCalEn" {{#if sensor.cal.calibrationEnable}}checked{{/if}}>
+          </div>
         </div>
-        <div class="settings">
-            <label>Calibration Offset Enabled:</label>
-            <input type="checkbox" id="offsetEn">
-        </div>
+        <p class="mpConfigNotes">Enables the calibration.</p>
 
-        <div class="settings" style="display:none">
-            <label>Calibration Method:</label>
-            <select id="calMethod">
-                <option value="SinglePoint">Single Point</option>
-                <option value="MultiPoint">Multi Point</option>
-                <option value="Offset">Offset</option>
-            </select> 
-            <input type="button" id="calBtn" value="Calibrate">
+        <!-- Offset Enabled -->
+        <div class="mpConfigFormElements">
+          <label for="mpSensorOffsetEn">Calibration Offset Enabled</label>
+          <div class="mpConfigFormVal">
+            <input type="checkbox" id="mpSensorOffsetEn" {{#if sensor.cal.offsetEnable}}checked{{/if}}>
+          </div>
         </div>
+        <p class="mpConfigNotes">Enables the calibration offset.</p>
       </div> 
 
     </div>
@@ -371,7 +428,9 @@
 
   </div>
 
-  <script src="variables.js"></script>
   <script src="main.js"></script>
+  <script>
+    
+   </script>
 </body>
 </html>

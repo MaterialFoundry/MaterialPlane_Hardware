@@ -21,6 +21,7 @@ class IRRecv
     int setPreferred(String timing_group);
     void stop();
     bool active();
+    void enableDebug(bool enable);
 
   private:
     bool rx_check_in_range(int duration_ticks, int target_us);
@@ -35,5 +36,6 @@ class IRRecv
     std::vector<uint8_t> _preferred;
     RingbufHandle_t _rb = NULL;
     bool _active = false;
+    bool _debug = false;
 };
 #endif // _IRRECV_H_ 

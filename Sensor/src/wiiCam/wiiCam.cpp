@@ -227,6 +227,10 @@ void wiiCam::getMeasuredPoint(uint8_t point){
       irPoints[point].y = 0;
       irPoints[point].avgBrightness = 0;
       irPoints[point].maxBrightness = 0;
+      _avgPoints[point].x += _avgPoints[point].x/_avgCounter;
+      _avgPoints[point].y += _avgPoints[point].y/_avgCounter;
+      _avgPoints[point].avgBrightness += _avgPoints[point].avgBrightness/_avgCounter;
+      _avgPoints[point].maxBrightness += _avgPoints[point].maxBrightness/_avgCounter;
       return;
     }
   }

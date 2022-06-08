@@ -19,7 +19,8 @@
 #define IR_MINAREA_ADDR     308   //1 byte
 #define IR_MAXAREA_ADDR     309   //2 bytes
 #define IR_POINTS_ADDR      311   //1 byte
-#define IR_AVG_ADDR         312   //1 byte    
+#define IR_AVG_ADDR         312   //1 byte
+#define IR_DROP_DELAY       313   //1 byte    
 
 #define CAL_EN_ADDR         400
 #define OFFSET_EN_ADDR      401
@@ -47,6 +48,11 @@ void startupEeprom(){
   wsMode = getEepromWsMode();
   debug = getEepromDebug();
   serialOutput = getEepromSerialOutput();
+  dropDelayTime = getEepromIrDropDelay();
+  if (dropDelayTime == 2550) {
+    dropDelayTime = DROP_DELAY_TIME;
+    setEepromIrDropDelay(dropDelayTime);
+  }
 }
 
 void initializeEepromIRsensor(){
@@ -70,6 +76,7 @@ void initializeEepromIRsensor(){
     IRsensor.setMaxAreaThreshold(getEepromMaxArea());
     IRsensor.setObjectNumberSetting(getEepromIrPoints());
   #endif
+  dropDelay = getEepromIrDropDelay()/getEepromIrFramePeriod();
 }
 
 
@@ -85,6 +92,7 @@ void firstBoot(){
   setEepromWsPort(WS_PORT_DEFAULT);
   setEepromWsMode(WS_MODE_SERVER);
   setEepromAvg(AVERAGE_NUM);
+  setEepromIrDropDelay(DROP_DELAY_TIME);
   setEepromIrFramePeriod(FRAME_PERIOD);
   setEepromIrExposure(EXPOSURE_TIME);
   setEepromIrGain(GAIN);
@@ -258,6 +266,16 @@ uint8_t getEepromAvg(){
 
 void setEepromAvg(uint8_t val) {
   EEPROM.write(IR_AVG_ADDR,val);
+  EEPROM.commit(); 
+}
+
+uint16_t getEepromIrDropDelay(){
+  return EEPROM.read(IR_DROP_DELAY)*10;
+}
+
+void setEepromIrDropDelay(uint16_t val) {
+  if (val > 2500) val = 2500;
+  EEPROM.write(IR_DROP_DELAY,val/10);
   EEPROM.commit(); 
 }
 

@@ -1,3 +1,7 @@
 Sensor.zip
 Base.zip
 Pen.zip
+Sensor/firmware_beta.bin
+Sensor/firmware_diy_full.bin
+Sensor/firmware_diy_basic.bin
+Sensor/webserver.bin

@@ -1,3 +1,8 @@
+
+void broadcastWs(String msg) {
+  webSocketServer.broadcastTXT(msg);
+}
+
 bool initialSend = true;
 
 void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -23,17 +28,10 @@ void webSocketServerEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
           for (int i=0; i<length; i++) pl += char(payload[i]);
           pl += ' ';
           analyzeMessage(pl);
-          
-         // if (pl.indexOf("STOP")>=0) stopCal = true;
-         // else analyzeData(pl);
         }
         break;
     case WStype_BIN:
         if (debug) Serial.printf("[%u] get binary length: %u\n", num, length);
-       // hexdump(payload, length);
-
-        // send message to client
-        // webSocketServer.sendBIN(num, payload, length);
         break;
     case WStype_ERROR:      
     case WStype_FRAGMENT_TEXT_START:

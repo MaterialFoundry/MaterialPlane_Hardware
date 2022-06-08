@@ -53,7 +53,7 @@ void connectWifi(const char* ssid, const char* password, uint8_t ssidLength, uin
   wsMode = WS_MODE_SERVER;  //for now, force server mode
   if (wsMode == WS_MODE_SERVER) {
     webSocketServer.begin();
-    Serial.println("Websocket server started on port: " + (String)wsPort + "\n");
+    Serial.println("Websocket server started on port: " + (String)wsPort);
   }
   
   //Connect to websocket server

@@ -98,13 +98,9 @@ void initialization() {
   char password[passwordString.length()+1];
   stringToChar(passwordString, password);
   connectWifi(ssid, password, ssidString.length(), passwordString.length());
-  
-  webServer.onNotFound([]() {                              // If the client requests any URI
-    if (!handleFileRead(webServer.uri()))                  // send it if it exists
-     webServer.send(404, "text/html", getEmptyIndex()); // otherwise, respond with a 404 (Not Found) error
-  });
 
-  webServer.begin();
+  initializeWebserver();
+ 
 /*
   xTaskCreatePinnedToCore(  
     irSensorLoop,    //function
@@ -150,4 +146,5 @@ void initialization() {
   printStatus();
   
   Serial.println("\nDone intializing\n-----------------------------------------------------------------------------\n");
+  
 }

@@ -1,138 +1,141 @@
-String insertString(String indexString, String startString, int startOffset, String endString, int endOffset, String inString, String insert) {
-  int index = inString.indexOf(indexString);
-  int startLocation = inString.indexOf(startString,index) + startOffset;
-  int endLocation = inString.indexOf(endString,index) + endOffset;
-  String beginString = inString;
-  beginString.remove(startLocation);
-  inString.remove(0,endLocation);
-  return beginString + insert + inString;
-}
+void initializeWebserver() {
 
-void updateServer() {
+  webServer.addHandler(new SPIFFSEditor(SPIFFS, "admin","admin"));
+
+  webServer.on("/update", HTTP_POST, [&](AsyncWebServerRequest *request) {
+        
+        // the request handler is triggered after the upload has finished... 
+        // create the response, add header, and send response
+        AsyncWebServerResponse *response = request->beginResponse((Update.hasError())?500:200, "text/plain", (Update.hasError())?"FAIL":"OK");
+        response->addHeader("Connection", "close");
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        request->send(response);
+        ESP.restart();
+    }, [&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        //Upload handler chunks in data
+      
+        if (!index) {
+            //if(!request->hasParam("MD5", true)) {
+            //    return request->send(400, "text/plain", "MD5 parameter missing");
+            //}
+
+            //if(!Update.setMD5(request->getParam("MD5", true)->value().c_str())) {
+            //    return request->send(400, "text/plain", "MD5 parameter invalid");
+            //}
+
+            int cmd = (filename.indexOf("webserver") > -1) ? U_SPIFFS : U_FLASH;
+            Serial.println("Cmd: " + (String)cmd + "\tFN: " + (String)filename);
+            
+            if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) { // Start with max available size
+              Update.printError(Serial);
+              return request->send(400, "text/plain", "OTA could not begin");
+            }
+        }
+
+        // Write chunked data to the free sketch space
+        if(len){
+            if (Update.write(data, len) != len) {
+                return request->send(400, "text/plain", "OTA could not begin");
+            }
+        }
+            
+        if (final) { // if the final flag is set then this is the last frame of data
+            if (!Update.end(true)) { //true to set the size to the current progress
+                Update.printError(Serial);
+                return request->send(400, "text/plain", "Could not end OTA");
+            }
+        }else{
+            return;
+        }
+        
+    });
   
-  char path[14] = "/variables.js";
-  String f = readFile(SPIFFS,path);
-  
-  String message = "";
-     
-  //set ipAddress
-  message = WiFi.isConnected() ? WiFi.localIP().toString().c_str() : WiFi.softAPIP().toString().c_str();
-  f = insertString("ipAddress", "\"", 1, ";", -1, f, message);
+  webServer.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(ESP.getFreeHeap()));
+  });
 
-  //set wsPort
-  message = (String)wsPort;
-  f = insertString("wsPort", "\"", 1, ";", -1, f, message);
+  webServer.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-  char fChar[f.length()];
-  stringToChar(f,fChar);
-  writeFile(SPIFFS, path, fChar);
-}
+  webServer.onNotFound([](AsyncWebServerRequest *request){
+    Serial.printf("NOT_FOUND: ");
+    if(request->method() == HTTP_GET)
+      Serial.printf("GET");
+    else if(request->method() == HTTP_POST)
+      Serial.printf("POST");
+    else if(request->method() == HTTP_DELETE)
+      Serial.printf("DELETE");
+    else if(request->method() == HTTP_PUT)
+      Serial.printf("PUT");
+    else if(request->method() == HTTP_PATCH)
+      Serial.printf("PATCH");
+    else if(request->method() == HTTP_HEAD)
+      Serial.printf("HEAD");
+    else if(request->method() == HTTP_OPTIONS)
+      Serial.printf("OPTIONS");
+    else
+      Serial.printf("UNKNOWN");
+    Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
 
-void handleRoot() {
-  //webServer.send(200, "text/plain", "hello from ESP32!");
-  handleFileRead("/");
-}
-
-void handleNotFound(){
-  String message = "File Not Found\n\n";
-  message += "URI: ";
-  message += webServer.uri();
-  message += "\nMethod: ";
-  message += (webServer.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += webServer.args();
-  message += "\n";
-  for (uint8_t i=0; i<webServer.args(); i++){
-    message += " " + webServer.argName(i) + ": " + webServer.arg(i) + "\n";
-  }
-  webServer.send(404, "text/plain", message);
-}
-
-String getContentType(String filename) { // convert the file extension to the MIME type
-  if (filename.endsWith(".html")) return "text/html";
-  else if (filename.endsWith(".css")) return "text/css";
-  else if (filename.endsWith(".js")) return "application/javascript";
-  else if (filename.endsWith(".ico")) return "image/x-icon";
-  else if (filename.endsWith(".jpg")) return "image/jpg";
-  return "text/plain";
-}
-
-bool handleFileRead(String path) { // send the right file to the client (if it exists)
-  if(debug) Serial.println("handleFileRead: " + path);
-
-  if (path.endsWith("/")) {
-    path += "index.html";         // If a folder is requested, send the index file
-    updateServer();
-  }
-  String contentType = getContentType(path);            // Get the MIME type
-  if (SPIFFS.exists(path)) {                            // If the file exists
-    File file = SPIFFS.open(path, "r");                 // Open it
-    size_t sent = webServer.streamFile(file, contentType); // And send it to the client
-    file.close();                                       // Then close the file again
-    return true;
-  }
-  if(debug) Serial.println("\tFile Not Found");
-  return false;                                         // If the file doesn't exist, return false
-}
-
-String readFile(fs::FS &fs, const char * path){
-  if(debug) Serial.printf("Reading file: %s\r\n", path);
-  File file = fs.open(path, "r");
-
-  if(!file || file.isDirectory()){
-    if(debug) Serial.println("- empty file or failed to open file");
-    if (path == "/") {
-      file.close();
+    if(request->contentLength()){
+      Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
+      Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
     }
-    else {
-      file.close();
-      return String();
+
+    int headers = request->headers();
+    int i;
+    for(i=0;i<headers;i++){
+      AsyncWebHeader* h = request->getHeader(i);
+      Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
     }
+
+    int params = request->params();
+    for(i=0;i<params;i++){
+      AsyncWebParameter* p = request->getParam(i);
+      if(p->isFile()){
+        Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
+      } else if(p->isPost()){
+        Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+      } else {
+        Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+      }
+    }
+
+    request->send(404);
+  });
+  /*
+  webServer.onFileUpload([](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final){
+    if(!index)
+      Serial.printf("UploadStart: %s\n", filename.c_str());
+    Serial.printf("%s", (const char*)data);
+    if(final)
+      Serial.printf("UploadEnd: %s (%u)\n", filename.c_str(), index+len);
+  });
+  */
+  webServer.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    if(!index)
+      Serial.printf("BodyStart: %u\n", total);
+    Serial.printf("%s", (const char*)data);
+    if(index + len == total)
+      Serial.printf("BodyEnd: %u\n", total);
+  });
+
+  webServer.begin();
+  Serial.println("HTTP webserver started\n");
+  webserverVersion = getWebserverVersion();
+}
+
+String getWebserverVersion() {
+  File file = SPIFFS.open("/main.js", FILE_READ);
+  String ver = "";
+  uint8_t saveState = 0;
+  while(file.available()) {
+    char c = file.read();
+    if (c == ';') break;
+    else if (saveState == 0 && c == '"') saveState = 1;
+    else if (saveState == 1 && c == 'v') saveState = 2;
+    else if (saveState == 2 && c == '"') break;
+    else if (saveState == 2) ver += c;
   }
-  if(debug) Serial.println("- read from file:");
-  String fileContent;
-  while(file.available()){
-    fileContent+=String((char)file.read());
-  }
-  //Serial.println(fileContent);
   file.close();
-  return fileContent;
-}
-
-void writeFile(fs::FS &fs, const char * path, const char * message){
-  if(debug) Serial.printf("Writing file: %s\r\n", path);
-  File file = fs.open(path, "w");
-  if(!file){
-    Serial.println("- failed to open file for writing");
-    return;
-  }
-
-  int bytesWritten = file.print(message);
-  
-  if (debug) {
-    Serial.println("Bytes Written: " + (String)bytesWritten);
-    if(bytesWritten >= 0){
-      Serial.println("- file written");
-    } else {
-      Serial.println("- write failed");
-    }
-  }
-  
-  file.close();
-}
-
-String getEmptyIndex() {
-
-return "<html>\
-  <head>\
-    <title>Material Sensor</title>\
-    <style>\
-      body { background-color: #000000; font-family: Arial, Helvetica, Sans-Serif; Color: #ffffff; }\
-    </style>\
-  </head>\
-  <body>\
-    <h1>Page not found</h1>\
-    <p>Could not find the requested page, please make sure you have uploaded the latest webserver files.<br>Instructions can be found in the <a href=\"https://github.com/CDeenen/MaterialPlane/wiki/Sensor-Installation-Instructions\">wiki</a>.</p>\
-  </body>\
-</html>";
+  return ver;
 }
