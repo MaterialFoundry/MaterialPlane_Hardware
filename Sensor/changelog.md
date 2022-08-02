@@ -1,5 +1,10 @@
 # Changelog Material Plane Sensor Firmware
 
+### Firmware v2.1.6 - 02-08-2022
+<ul>
+    <li>Fixed issue with DIY hardware which became imcompatible with the last module version.</li>
+</ul>
+
 ### Firmware v2.1.5 - 08-06-2022
 <ul>
     <li>Added OTA update capability</li>

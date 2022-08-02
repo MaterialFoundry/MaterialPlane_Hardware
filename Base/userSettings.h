@@ -9,6 +9,17 @@
  */
 //#define ID 0
 
+/**
+ * ALWAYS_ON
+ * Always on mode
+ */
+//#define ALWAYS_ON
+
+/**
+ * ANY_MOTION
+ */
+//#define ANY_MOTION
+
 /*
  * SAMPLE_RATE
  * Sets the sample rate of the accelerometer.

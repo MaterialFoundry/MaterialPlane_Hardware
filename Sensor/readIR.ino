@@ -29,7 +29,7 @@ void readIR() {
 #else
   if (millis() - IRtimer > IRsensor.getFramePeriod()) {
     IRtimer = millis();
-
+  irMode = 1;
 #endif
 
     bool newPoints = IRsensor.getOutput(1);

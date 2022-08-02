@@ -256,13 +256,13 @@ class MC3419
      */
     void setTiltDebounce(uint8_t duration);
 
-    /*
+    
     void setAnymotionThreshold(uint16_t threshold);
     void setAnymotionDebounce(uint8_t duration);
     void setShakeThreshold(uint16_t threshold);
     void setShakePeakToPeakDuration(uint16_t data);
     void setShakeDuration(uint8_t duration);
-    */
+    
     
   private:
     /*

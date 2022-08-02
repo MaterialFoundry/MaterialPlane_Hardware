@@ -12,6 +12,7 @@
  */
 #define CMD 1
 #define CMD_CAL 3
+#define CMD_PIT 5
 
 /*
  * PWM settings

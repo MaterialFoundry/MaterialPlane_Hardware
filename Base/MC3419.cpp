@@ -94,7 +94,7 @@ void MC3419::setTiltDebounce(uint8_t duration) {
   writeRegister(TF_DEBOUNCE_REG, duration);
 }
 
-/*
+
 void MC3419::setAnymotionThreshold(uint16_t data) {
   writeRegister(AM_THRESH_REG, data, 2);
 }
@@ -119,7 +119,7 @@ void MC3419::setShakeDuration(uint8_t data) {
   _shakeDuration = data;
   setShakePeakToPeakDuration(_shakePeakToPeakDuration);
 }
-*/
+
 
 void MC3419::writeRegister(uint8_t address, uint16_t data, uint8_t bytesToSend) {
   digitalWrite(_cs,LOW);                    //CS LOW

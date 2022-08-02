@@ -23,6 +23,7 @@
 uint16_t serialNumber;
 bool calMode = false;
 unsigned long calModeTimer = 0;
+volatile bool pitTriggered = false;
 
 MC3419 accel(CS);
 
@@ -49,6 +50,13 @@ void setup() {
 
   //Configure PWM
   configurePWM();
+
+  #if defined(ALWAYS_ON) 
+    //Configure PIT
+    RTC.CLKSEL = RTC_CLKSEL_INT32K_gc;
+    RTC.PITINTCTRL = RTC_PI_bm;
+    RTC.PITCTRLA = RTC_PERIOD_CYC32768_gc | RTC_PITEN_bm;    //set PIT to a period of 1Hz and enable it
+  #endif
 
   //Set interrupt mode for INT_IN
   PORTC.PIN2CTRL |= 0x02;
@@ -94,6 +102,7 @@ void loop() {
   
   //Send IR message
   if (calMode) sendIR(CMD_CAL);
+  else if (pitTriggered) sendIR(CMD_PIT);
   else sendIR(CMD);
 
   //Blink red led if base is in calibration mode
@@ -107,18 +116,25 @@ void loop() {
 
   //Check if base is tilted. If not, and if not in calibration mode, start stop procedure to deactivate the base
   bool tilted = accel.getStatus()&1;
-  if (!tilted && calMode == false) {
+  if ((!tilted || pitTriggered) && calMode == false) {
 
-    //Send the normal command a few times. If base is tilted, return and continue 'active' operation
-    for (int i=0; i<STOP_REPEATS; i++) {
-      sendIR(CMD);
-      tilted = accel.getStatus()&1;
-      if (tilted) return;
+    if (pitTriggered) {
+      sendIR(CMD_PIT);
     }
+    if (!pitTriggered) {
+      //Send the normal command a few times. If base is tilted, return and continue 'active' operation
+      for (int i=0; i<STOP_REPEATS; i++) {
+        sendIR(CMD);
+        tilted = accel.getStatus()&1;
+        if (tilted) return;
+      }
 
-    //Send stop command
-    uint8_t stopCMD = 1<<7 | CMD;
-    sendIR(stopCMD);
+      //Send stop command
+      uint8_t stopCMD = 1<<7 | CMD;
+      sendIR(stopCMD);
+    }
+    
+    
     
     //Switch leds off
     digitalWrite(LED, LOW);
@@ -127,7 +143,7 @@ void loop() {
     //Delay 1 ms to ensure IR led is off
     delay(1);
     
-    
+    pitTriggered = false;
     #if defined(DEBUG) 
       //Print debug info
       while (!tilted) {
@@ -139,6 +155,7 @@ void loop() {
     #else
       //Sleep cpu to deactivate the base
       accel.clearInterrupts();
+      RTC.PITCTRLA = RTC_PERIOD_CYC32768_gc | RTC_PITEN_bm;
       sleep_cpu();
     #endif
 
@@ -148,10 +165,19 @@ void loop() {
   else accel.clearInterrupts();
 }
 
+/**
+ * PIT ISR
+ */
+ISR(RTC_PIT_vect) {
+  RTC.PITINTFLAGS=RTC_PI_bm;;  //clear PIT interrupt flags
+  pitTriggered = true;
+}
+
 /*
  * Interrupt service routines: clear interrupt flags
  */
 ISR(PORTC_PORT_vect) {
+  RTC.PITCTRLA = 0;
   PORTC.INTFLAGS=PORTC.INTFLAGS;  //clear pin interrupt flags
 }
 
@@ -220,7 +246,7 @@ void configurePWM() {
     accel.setDeviceMode(MODE_STANDBY);      //Put accelerometer in standby mode
     accel.setGPIOControl(0b00001100);       //Set GPIO control. Set bit 2 to 1 for INT active high, set bit 3 to 1 for INT push-pull
     accel.setSampleRate(SAMPLE_RATE);       //Set the sample rate
-    accel.setInterrupt(0b00000001);         //Set the interrupt enable register, bit 0 enables tilt, bit 1 enables flip, bit 3 enables shake. Set bit 6 to 1 for autoclear
+    
     accel.setTiltThreshold(TILT_THRESHOLD); //Set tilt threshold
     accel.setTiltDebounce(TILT_DEBOUNCE);   //Set tilt debounce
     /*
@@ -230,7 +256,17 @@ void configurePWM() {
     accel.setShakePeakToPeakDuration(50);
     accel.setShakeDuration(2);
     */
-    accel.setMotionControl(0b00000001);     //Enable motion control features. Bit 0 enables tilt/flip, bit 2 enables anymotion (req for shake), bit 3 enables shake, bit 5 inverts z-axis
+    #if defined(ANY_MOTION) 
+      accel.setMotionControl(0b00000100);     //Enable motion control features. Bit 0 enables tilt/flip, bit 2 enables anymotion (req for shake), bit 3 enables shake, bit 5 inverts z-axis
+      accel.setInterrupt(0b00000100);         //Set the interrupt enable register, bit 0 enables tilt, bit 1 enables flip, bit 3 enables shake. Set bit 6 to 1 for autoclear
+      accel.setAnymotionThreshold(10);
+      accel.setAnymotionDebounce(1);
+      accel.setRange(0b00001001);           //Set accelerometer range
+    #else
+      accel.setMotionControl(0b00000001); 
+      accel.setInterrupt(0b00000001);
+      accel.setRange(0b00000000);           //Set accelerometer range
+    #endif
     //accel.setRange(0b00000000);           //Set accelerometer range
     accel.clearInterrupts();                //Clear the interrupt register
     accel.resetMotionControl();             //Reset the motion control
