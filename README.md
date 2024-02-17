@@ -1,3 +1,6 @@
+# This repository is deprecated
+You can find the 3D models [here](https://github.com/MaterialFoundry/MaterialPlane_Models) and the sensor firmware [here](https://github.com/MaterialFoundry/MaterialPlane_Sensor).
+
 # Material Plane Hardware
 This repository contains all the files for the hardware side of Material Plane.<br>
 Please visit the <a href="https://github.com/CDeenen/MaterialPlane">Material Plane</a> main page for more info.<br>
